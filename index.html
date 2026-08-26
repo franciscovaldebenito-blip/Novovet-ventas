@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NOVOVET Analytics</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-body: #f8fafc;
+      --card-bg: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --green-primary: #059669;
+      --green-light: #d1fae5;
+      --border-color: #e2e8f0;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+    body { background-color: var(--bg-body); color: var(--text-main); padding: 20px 30px; overflow-x: hidden; }
+
+    .header-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .brand-title { font-size: 24px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px; }
+    .brand-title span { color: var(--green-primary); font-weight: 500; font-size: 18px; }
+    .vendedor-subtitle { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; }
+
+    .last-update-box {
+      background: #ecfdf5;
+      border: 1px solid #a7f3d0;
+      padding: 6px 14px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .update-info { text-align: right; }
+    .update-info label { font-size: 9px; font-weight: 700; color: var(--text-muted); display: block; text-transform: uppercase; }
+    .update-info span { font-size: 12px; font-weight: 700; color: var(--green-primary); }
+
+    .btn-refresh {
+      background: var(--green-primary);
+      color: white;
+      border: none;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+    }
+
+    /* NAVBAR MENU */
+    .nav-tabs {
+      display: flex;
+      gap: 20px;
+      border-bottom: 2px solid #f1f5f9;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+
+    .nav-tab {
+      padding: 8px 4px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-transform: uppercase;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      white-space: nowrap;
+    }
+
+    .nav-tab.active {
+      color: var(--green-primary);
+      border-bottom-color: var(--green-primary);
+    }
+
+    /* DASHBOARD LAYOUT */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+
+    /* KPI TOTAL */
+    .kpi-total-card {
+      border-left: 4px solid var(--green-primary);
+      text-align: center;
+      padding: 20px 15px;
+      margin-bottom: 15px;
+    }
+
+    .kpi-total-card label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    .kpi-total-card .amount { font-size: 28px; font-weight: 800; color: var(--green-primary); margin: 6px 0; }
+    .kpi-total-card .badge-meta {
+      background: #ecfdf5;
+      color: var(--green-primary);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 12px;
+      display: inline-block;
+    }
+
+    /* RANKING TABLE ACHICADO */
+    .ranking-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+    .ranking-list {
+      display: flex;
+      flex-direction: column;
+      max-height: 280px;
+      overflow-y: auto;
+      padding-right: 5px;
+    }
+    
+    /* Custom Scrollbar */
+    .ranking-list::-webkit-scrollbar { width: 4px; }
+    .ranking-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+    .ranking-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 7px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 12px;
+    }
+    .ranking-item:last-child { border-bottom: none; }
+    .vendedor-name { text-transform: lowercase; color: #334155; font-weight: 500; }
+    .vendedor-monto { font-weight: 700; color: #0f172a; }
+
+    /* CHART CARD CONTENIDO */
+    .chart-card { min-width: 0; width: 100%; }
+    .chart-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 15px; }
+    .chart-container { position: relative; height: 380px; width: 100%; }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <div class="header-top">
+    <div>
+      <div class="brand-title">NOVOVET <span>Analytics</span></div>
+      <div class="vendedor-subtitle">VENDEDOR: ADMINISTRADOR</div>
+    </div>
+
+    <div class="last-update-box">
+      <div class="update-info">
+        <label>Última Actualización</label>
+        <span id="updateTimestamp">--/--/---- - --:--:--</span>
+      </div>
+      <button class="btn-refresh" onclick="cargarDatos()">↻</button>
+    </div>
+  </div>
+
+  <!-- MENU SUPERS -->
+  <div class="nav-tabs">
+    <div class="nav-tab active">RESUMEN</div>
+    <div class="nav-tab">VENTA DETALLE</div>
+    <div class="nav-tab">CARTERA</div>
+    <div class="nav-tab">HISTÓRICO</div>
+    <div class="nav-tab">LABS</div>
+    <div class="nav-tab">COBERTURA</div>
+    <div class="nav-tab">MARGEN</div>
+    <div class="nav-tab">PROYECCIONES</div>
+    <div class="nav-tab">VISITAS</div>
+    <div class="nav-tab">PRODUCTOS</div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="dashboard-grid">
+    <div>
+      <div class="card kpi-total-card">
+        <label>VENTA TOTAL MES</label>
+        <div class="amount" id="montoTotal">$0</div>
+        <div class="badge-meta">37.4% de la meta</div>
+      </div>
+
+      <div class="card ranking-card">
+        <h3>Ranking de Ventas</h3>
+        <div class="ranking-list" id="listaRanking">
+          <div class="ranking-item"><span>Cargando...</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card chart-card">
+      <h3>Evolución Diaria del Mes</h3>
+      <div class="chart-container">
+        <canvas id="dailyChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let myChart = null;
+
+    function actualizarFechaHora() {
+      const ahora = new Date();
+      const fecha = ahora.toLocaleDateString('es-CL');
+      const hora = ahora.toLocaleTimeString('es-CL');
+      document.getElementById('updateTimestamp').innerText = `${fecha} - ${hora}`;
+    }
+
+    async function cargarDatos() {
+      actualizarFechaHora();
+      try {
+        const res = await fetch('http://localhost:3000/api/ventas/mes-actual');
+        const data = await res.json();
+        renderizarInterfaz(data);
+      } catch (err) {
+        console.error('Error al cargar datos:', err);
+      }
+    }
+
+    function renderizarInterfaz(data) {
+      document.getElementById('montoTotal').innerText = `$${Number(data.resumen.totalVendido).toLocaleString('es-CL')}`;
+
+      // Ranking compacto
+      const contRanking = document.getElementById('listaRanking');
+      contRanking.innerHTML = '';
+
+      if (data.resumen.vendedores && data.resumen.vendedores.length > 0) {
+        data.resumen.vendedores.forEach(item => {
+          contRanking.innerHTML += `
+            <div class="ranking-item">
+              <span class="vendedor-name">${item.vendedor}</span>
+              <span class="vendedor-monto">$${Number(item.monto).toLocaleString('es-CL')}</span>
+            </div>
+          `;
+        });
+      }
+
+      // Gráfico ajustado a contenedor flexible
+      const ctx = document.getElementById('dailyChart').getContext('2d');
+      const labels = data.resumen.evolucionDiaria.map(item => item.dia);
+      const montos = data.resumen.evolucionDiaria.map(item => item.monto);
+
+      if (myChart) {
+        myChart.destroy();
+      }
+
+      myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Ventas Diarias',
+            data: montos,
+            borderColor: '#059669',
+            backgroundColor: 'rgba(5, 150, 105, 0.05)',
+            borderWidth: 2.5,
+            tension: 0.3,
+            fill: true,
+            pointBackgroundColor: '#059669',
+            pointRadius: 3,
+            pointHoverRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                callback: function(value) {
+                  return value.toLocaleString('es-CL');
+                }
+              },
+              grid: { color: '#f1f5f9' }
+            },
+            x: {
+              grid: { color: '#f1f5f9' }
+            }
+          }
+        }
+      });
+    }
+
+    cargarDatos();
+  </script>
+</body>
+</html>
