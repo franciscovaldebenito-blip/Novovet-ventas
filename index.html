@@ -4,301 +4,939 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NOVOVET Analytics</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
+<style>
+
+
+/* GRID DE TARJETAS DE METAS DE VENDEDORES */
+.kpi-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.seller-kpi-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.seller-kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.seller-kpi-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seller-kpi-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.seller-kpi-amounts {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.seller-kpi-amounts b {
+  color: var(--text-main);
+}
+
+/* Barra de Progreso */
+.progress-bar-bg {
+  width: 100%;
+  height: 6px;
+  background-color: #f1f5f9;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
     :root {
       --bg-body: #f8fafc;
       --card-bg: #ffffff;
       --text-main: #0f172a;
       --text-muted: #64748b;
       --green-primary: #059669;
-      --green-light: #d1fae5;
       --border-color: #e2e8f0;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-    body { background-color: var(--bg-body); color: var(--text-main); padding: 20px 30px; overflow-x: hidden; }
+    body { background-color: var(--bg-body); color: var(--text-main); }
 
-    .header-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
+    /* MODALES & OVERLAYS */
+    .login-overlay, .modal-overlay {
+      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+      backdrop-filter: blur(4px);
+    }
+    .login-card {
+      background: #ffffff; padding: 35px 30px; border-radius: 16px;
+      width: 100%; max-width: 360px; text-align: center;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    .modal-card {
+      background: #ffffff; padding: 30px; border-radius: 16px;
+      width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); text-align: left;
+    }
+    .login-input, .modal-input {
+      width: 100%; padding: 10px 12px; margin-bottom: 12px;
+      border: 1px solid var(--border-color); border-radius: 8px; font-size: 13px; outline: none;
     }
 
-    .brand-title { font-size: 24px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 8px; }
-    .brand-title span { color: var(--green-primary); font-weight: 500; font-size: 18px; }
-    .vendedor-subtitle { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; }
-
-    .last-update-box {
-      background: #ecfdf5;
-      border: 1px solid #a7f3d0;
-      padding: 6px 14px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    /* HEADER */
+    .navbar-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.85rem 2rem; background-color: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+      position: sticky; top: 0; z-index: 100;
     }
+    .brand-container { display: flex; flex-direction: column; }
+    .brand-title { font-size: 1.25rem; font-weight: 800; color: var(--green-primary); letter-spacing: -0.02em; }
+    .brand-title span { font-weight: 300; color: var(--text-main); }
+    .vendedor-subtitle { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
 
-    .update-info { text-align: right; }
-    .update-info label { font-size: 9px; font-weight: 700; color: var(--text-muted); display: block; text-transform: uppercase; }
-    .update-info span { font-size: 12px; font-weight: 700; color: var(--green-primary); }
+    /* PESTAÑAS */
+    .nav-tabs { display: flex; gap: 0.35rem; background: #f1f5f9; padding: 0.25rem; border-radius: 9999px; border: 1px solid var(--border-color); }
+    .nav-tab { border: none; background: transparent; padding: 0.45rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); border-radius: 9999px; cursor: pointer; transition: all 0.2s ease; text-transform: uppercase; }
+    .nav-tab.active { background-color: var(--card-bg); color: var(--green-primary); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
 
-    .btn-refresh {
-      background: var(--green-primary);
-      color: white;
-      border: none;
-      width: 28px;
-      height: 28px;
-      border-radius: 6px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .btn-refresh, .btn-logout, .btn-secondary {
+      display: flex; align-items: center; gap: 0.5rem; background-color: var(--card-bg);
+      color: var(--text-main); border: 1px solid var(--border-color); padding: 0.45rem 0.9rem;
+      border-radius: 9999px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
     }
+    .btn-logout { color: #dc2626; border-color: #fecaca; }
 
-    /* NAVBAR MENU */
-    .nav-tabs {
-      display: flex;
-      gap: 20px;
-      border-bottom: 2px solid #f1f5f9;
-      margin-bottom: 20px;
-      overflow-x: auto;
-    }
+    /* CONTENEDOR PRINCIPAL */
+    .main-body { padding: 20px 30px; }
+    .view-section { display: none; }
+    .view-section.active { display: block; }
 
-    .nav-tab {
-      padding: 8px 4px;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-muted);
-      cursor: pointer;
-      text-transform: uppercase;
-      border-bottom: 2px solid transparent;
-      margin-bottom: -2px;
-      white-space: nowrap;
-    }
-
-    .nav-tab.active {
-      color: var(--green-primary);
-      border-bottom-color: var(--green-primary);
-    }
-
-    /* DASHBOARD LAYOUT */
-    .dashboard-grid {
-      display: grid;
-      grid-template-columns: 300px minmax(0, 1fr);
-      gap: 20px;
-      align-items: start;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 14px;
-      padding: 18px 20px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-    }
-
-    /* KPI TOTAL */
-    .kpi-total-card {
-      border-left: 4px solid var(--green-primary);
-      text-align: center;
-      padding: 20px 15px;
-      margin-bottom: 15px;
-    }
-
+    /* CARDS Y TABLAS */
+    .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+    .dashboard-grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 20px; align-items: start; }
+    .kpi-total-card { border-left: 4px solid var(--green-primary); text-align: center; padding: 20px 15px; margin-bottom: 15px; }
     .kpi-total-card label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
     .kpi-total-card .amount { font-size: 28px; font-weight: 800; color: var(--green-primary); margin: 6px 0; }
-    .kpi-total-card .badge-meta {
-      background: #ecfdf5;
-      color: var(--green-primary);
-      font-size: 10px;
-      font-weight: 700;
-      padding: 3px 10px;
-      border-radius: 12px;
-      display: inline-block;
-    }
+    .badge-meta { background: #ecfdf5; color: var(--green-primary); font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 12px; display: inline-block; }
 
-    /* RANKING TABLE ACHICADO */
     .ranking-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
-    .ranking-list {
-      display: flex;
-      flex-direction: column;
-      max-height: 280px;
-      overflow-y: auto;
-      padding-right: 5px;
-    }
-    
-    /* Custom Scrollbar */
-    .ranking-list::-webkit-scrollbar { width: 4px; }
-    .ranking-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    /* Se elimina el scroll y la limitación de altura para mostrar toda la lista completa */
+    .ranking-list { display: flex; flex-direction: column; }
+    .ranking-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
 
-    .ranking-item {
-      display: flex;
-      justify-content: space-between;
-      padding: 7px 0;
-      border-bottom: 1px solid #f1f5f9;
-      font-size: 12px;
-    }
-    .ranking-item:last-child { border-bottom: none; }
-    .vendedor-name { text-transform: lowercase; color: #334155; font-weight: 500; }
-    .vendedor-monto { font-weight: 700; color: #0f172a; }
+    /* Reducción de altura del gráfico */
+    .chart-container { position: relative; height: 240px; width: 100%; }
 
-    /* CHART CARD CONTENIDO */
-    .chart-card { min-width: 0; width: 100%; }
-    .chart-card h3 { font-size: 15px; font-weight: 700; margin-bottom: 15px; }
-    .chart-container { position: relative; height: 380px; width: 100%; }
+    .filter-bar { display: flex; gap: 12px; align-items: flex-end; margin-bottom: 16px; flex-wrap: wrap; }
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+    .filter-group label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
+    .filter-group input, .filter-group select { padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 12px; outline: none; background: white; }
+
+    .btn-buscar { background: var(--green-primary); color: white; border: none; padding: 7px 16px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; height: 33px; }
+    .total-badge-detalle { margin-left: auto; background: #ecfdf5; color: var(--green-primary); border: 1px solid #a7f3d0; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 20px; }
+
+    .table-container { max-height: 440px; overflow-y: auto; }
+    table.detalle-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    table.detalle-table th { position: sticky; top: 0; background: #f8fafc; text-align: left; padding: 10px 8px; color: var(--text-muted); font-weight: 700; font-size: 11px; border-bottom: 2px solid var(--border-color); }
+    table.detalle-table td { padding: 10px 8px; border-bottom: 1px solid #f1f5f9; color: #334155; }
+    .doc-pill { background: #f1f5f9; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; color: #475569; }
+
+    .pagination-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--border-color); }
+    .pagination-btn { background: #ffffff; border: 1px solid var(--border-color); padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-main); }
+    .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .pagination-info { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
+    .sub-dias-habiles { font-size: 9px; font-weight: 600; color: var(--green-primary); display: block; margin-top: 2px; }
+    .user-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
   </style>
 </head>
 <body>
 
-  <!-- TOP HEADER -->
-  <div class="header-top">
-    <div>
-      <div class="brand-title">NOVOVET <span>Analytics</span></div>
-      <div class="vendedor-subtitle">VENDEDOR: ADMINISTRADOR</div>
-    </div>
+  <!-- 0. PANTALLA LOGIN -->
+  <div id="loginModal" class="login-overlay">
+    <div class="login-card">
+      <h2 style="color:var(--green-primary); margin-bottom:4px;">NOVOVET</h2>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Acceso al Panel Analytics</p>
 
-    <div class="last-update-box">
-      <div class="update-info">
-        <label>Última Actualización</label>
-        <span id="updateTimestamp">--/--/---- - --:--:--</span>
+      <form onsubmit="ejecutarLogin(event)">
+        <input type="email" id="loginEmail" class="login-input" placeholder="Correo institucional" required>
+        <input type="password" id="loginPass" class="login-input" placeholder="Contraseña" required>
+        <button type="submit" class="btn-buscar" style="width:100%; height:38px; margin-top:5px;">Ingresar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 1: GESTIÓN DE ACCESOS (ADMIN) -->
+  <div id="modalAccesos" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+        <h3 style="font-size:16px; font-weight:700;">Gestión de Accesos</h3>
+        <button onclick="cerrarModal('modalAccesos')" style="border:none; background:none; font-size:18px; cursor:pointer;">✕</button>
       </div>
-      <button class="btn-refresh" onclick="cargarDatos()">↻</button>
+
+      <form onsubmit="guardarUsuarioAcceso(event)">
+        <input type="text" id="accNombre" class="modal-input" placeholder="Nombre Completo" required>
+        <input type="email" id="accEmail" class="modal-input" placeholder="Correo Electrónico" required>
+        <input type="password" id="accPass" class="modal-input" placeholder="Contraseña">
+        <select id="accRol" class="modal-input">
+          <option value="VENDEDOR">Rol: Vendedor</option>
+          <option value="ADMIN">Rol: Administrador</option>
+        </select>
+        <select id="accVinculado" class="modal-input">
+          <option value="">Cargando vendedores...</option>
+        </select>
+
+        <button type="submit" class="btn-buscar" style="width:100%; height:36px;">Guardar Usuario</button>
+      </form>
+
+      <h4 style="font-size:13px; font-weight:700; margin-top:20px; margin-bottom:10px;">Usuarios Registrados</h4>
+      <div id="listaUsuariosRegistrados" style="max-height: 200px; overflow-y:auto;"></div>
     </div>
   </div>
 
-  <!-- MENU SUPERS -->
-  <div class="nav-tabs">
-    <div class="nav-tab active">RESUMEN</div>
-    <div class="nav-tab">VENTA DETALLE</div>
-    <div class="nav-tab">CARTERA</div>
-    <div class="nav-tab">HISTÓRICO</div>
-    <div class="nav-tab">LABS</div>
-    <div class="nav-tab">COBERTURA</div>
-    <div class="nav-tab">MARGEN</div>
-    <div class="nav-tab">PROYECCIONES</div>
-    <div class="nav-tab">VISITAS</div>
-    <div class="nav-tab">PRODUCTOS</div>
-  </div>
+<!-- MODAL DE ASIGNACIÓN MASIVA DE METAS -->
+<div id="modalMeta" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+  <div style="background:#fff; border-radius:12px; width:450px; max-width:90%; padding:24px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+    
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <h3 style="margin:0; font-size:18px; color:#0f172a;">Asignar Metas Mensuales</h3>
+      <button onclick="cerrarModal('modalMeta')" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">&times;</button>
+    </div>
 
-  <!-- MAIN GRID -->
+    <form onsubmit="guardarMetasMasivas(event)">
+      <div id="contenedorListaMetas" style="max-height:350px; overflow-y:auto; padding-right:8px; margin-bottom:20px;">
+        <!-- Aquí se renderizan los vendedores con sus inputs -->
+      </div>
+
+      <button type="submit" style="width:100%; background:#0284c7; color:#fff; border:none; padding:12px; border-radius:8px; font-weight:700; cursor:pointer;">
+        Guardar Todas las Metas
+      </button>
+    </form>
+
+  </div>
+</div>
+
+  <!-- HEADER -->
+  <header class="navbar-header">
+    <div class="brand-container">
+      <div class="brand-title">NOVOVET <span>Analytics</span></div>
+      <div class="vendedor-subtitle" id="lblUsuarioRol">VENDEDOR: CARGANDO...</div>
+    </div>
+
+    <nav class="nav-tabs">
+      <button class="nav-tab active" onclick="cambiarTab('resumen', this)">RESUMEN</button>
+      <button class="nav-tab" onclick="cambiarTab('metas', this)">METAS</button>
+      <button class="nav-tab" onclick="cambiarTab('detalle', this)">VENTA DETALLE</button>
+    </nav>
+
+    <div class="header-right">
+      <button id="btnGestionAccesos" class="btn-secondary" style="display:none; color:var(--green-primary); border-color:var(--green-primary);" onclick="abrirModalAccesos()">Accesos</button>
+      <button id="btnRefresh" class="btn-refresh" onclick="recargarActual()" title="Actualizar datos">Actualizar</button>
+      <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
+    </div>
+  </header>
+
+  <main class="main-body">
+
+    <!-- VISTA 1: RESUMEN -->
+<div id="view-resumen" class="view-section active">
   <div class="dashboard-grid">
     <div>
       <div class="card kpi-total-card">
         <label>VENTA TOTAL MES</label>
         <div class="amount" id="montoTotal">$0</div>
-        <div class="badge-meta">37.4% de la meta</div>
+        <div class="badge-meta">En ejecución</div>
       </div>
-
       <div class="card ranking-card">
-        <h3>Ranking de Ventas</h3>
+        <h3 id="tituloRanking">Ranking de Ventas</h3>
         <div class="ranking-list" id="listaRanking">
           <div class="ranking-item"><span>Cargando...</span></div>
         </div>
       </div>
     </div>
-
-    <div class="card chart-card">
-      <h3>Evolución Diaria del Mes</h3>
+    <div class="card">
+      <h3 style="font-size:15px; font-weight:700; margin-bottom:15px;">Evolución Diaria del Mes</h3>
       <div class="chart-container">
         <canvas id="dailyChart"></canvas>
       </div>
+
+      <!-- CONTENEDOR PARA LAS TARJETAS DE AVANCE DE VENDEDORES -->
+      <div id="gridTarjetasVendedores" class="kpi-cards-grid">
+        <!-- Se puebla dinámicamente desde JavaScript -->
+      </div>
     </div>
   </div>
+</div>
 
-  <script>
-    let myChart = null;
-
-    function actualizarFechaHora() {
-      const ahora = new Date();
-      const fecha = ahora.toLocaleDateString('es-CL');
-      const hora = ahora.toLocaleTimeString('es-CL');
-      document.getElementById('updateTimestamp').innerText = `${fecha} - ${hora}`;
-    }
-
-    async function cargarDatos() {
-      actualizarFechaHora();
-      try {
-        const res = await fetch('http://localhost:3000/api/ventas/mes-actual');
-        const data = await res.json();
-        renderizarInterfaz(data);
-      } catch (err) {
-        console.error('Error al cargar datos:', err);
-      }
-    }
-
-    function renderizarInterfaz(data) {
-      document.getElementById('montoTotal').innerText = `$${Number(data.resumen.totalVendido).toLocaleString('es-CL')}`;
-
-      // Ranking compacto
-      const contRanking = document.getElementById('listaRanking');
-      contRanking.innerHTML = '';
-
-      if (data.resumen.vendedores && data.resumen.vendedores.length > 0) {
-        data.resumen.vendedores.forEach(item => {
-          contRanking.innerHTML += `
-            <div class="ranking-item">
-              <span class="vendedor-name">${item.vendedor}</span>
-              <span class="vendedor-monto">$${Number(item.monto).toLocaleString('es-CL')}</span>
+    <!-- VISTA 2: METAS -->
+    <div id="view-metas" class="view-section">
+      <div class="card">
+        <div class="filter-bar">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <h3 style="font-size:16px; font-weight:700;">Cumplimiento de Metas</h3>
+            <div class="filter-group">
+              <label>MES</label>
+              <select id="selectMesMetas" onchange="cargarMetas()">
+                <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
+                <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
+                <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
+                <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
+              </select>
             </div>
-          `;
+            <div class="filter-group">
+              <label>AÑO</label>
+              <select id="selectAnioMetas" onchange="cargarMetas()">
+                <option value="2026" selected>2026</option>
+                <option value="2025">2025</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- BOTÓN SOLO VISIBLE PARA ADMIN -->
+          <button id="btnNuevaMeta" class="btn-buscar" style="display:none; background:#0284c7;" onclick="modalCargarMeta()">
+            + Asignar Meta
+          </button>
+        </div>
+
+        <div class="table-container">
+          <table class="detalle-table" id="tablaMetasContenedor">
+            <thead id="headMetas">
+              <tr>
+                <th>Vendedor</th>
+                <th style="text-align:right;">Meta Mensual</th>
+                <th style="text-align:center;">Sem 1</th><th style="text-align:center;">Sem 2</th>
+                <th style="text-align:center;">Sem 3</th><th style="text-align:center;">Sem 4</th>
+                <th style="text-align:right;">Venta Total</th>
+                <th style="text-align:center;">% Avance Mes</th>
+              </tr>
+            </thead>
+            <tbody id="bodyMetas">
+              <tr><td colspan="8" style="text-align:center; padding:20px;">Cargando metas...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VISTA 3: VENTA DETALLE -->
+    <div id="view-detalle" class="view-section">
+      <div class="card">
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label>DESDE</label>
+            <input type="date" id="filtroDesde">
+          </div>
+          <div class="filter-group">
+            <label>HASTA</label>
+            <input type="date" id="filtroHasta">
+          </div>
+          <div class="filter-group">
+            <label>VENDEDOR</label>
+            <input type="text" id="filtroVendedor" placeholder="Nombre vendedor...">
+          </div>
+          <div class="filter-group">
+            <label>BUSCAR</label>
+            <input type="text" id="filtroBuscar" placeholder="Cliente o factura...">
+          </div>
+          <button class="btn-buscar" onclick="consultarDetalle(1)">Buscar</button>
+
+          <div class="total-badge-detalle" id="totalFiltradoDetalle">0 registros encontrados</div>
+        </div>
+
+        <div class="table-container">
+          <table class="detalle-table">
+            <thead>
+              <tr>
+                <th style="width: 100px;">Fecha</th>
+                <th style="width: 150px;">Vendedor</th>
+                <th>Cliente</th>
+                <th style="width: 110px; text-align: center;">Doc</th>
+                <th style="width: 130px; text-align: right;">Monto Factura</th>
+              </tr>
+            </thead>
+            <tbody id="bodyDetalle">
+              <tr><td colspan="5" style="text-align:center; padding: 30px; color:#64748b;">Presiona <b>Buscar</b> para obtener transacciones.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-bar">
+          <button class="pagination-btn" id="btnPrev" onclick="cambiarPagina(-1)" disabled>← Anterior</button>
+          <div class="pagination-info" id="paginationInfo">Página 1 de 1</div>
+          <button class="pagination-btn" id="btnNext" onclick="cambiarPagina(1)" disabled>Siguiente →</button>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+<script>
+    let usuarioSesion = null;
+    let myChart = null;
+    let tabActual = 'resumen';
+    let paginaActual = 1;
+    let totalPaginas = 1;
+
+    // --- AUTENTICACIÓN Y ROLES ---
+    async function ejecutarLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPass').value;
+
+      try {
+        const res = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
         });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Credenciales incorrectas');
+
+        usuarioSesion = data.usuario;
+        localStorage.setItem('novovet_user', JSON.stringify(usuarioSesion));
+        
+        iniciarInterfaz();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function comprobarSesion() {
+      const stored = localStorage.getItem('novovet_user');
+      if (stored) {
+        usuarioSesion = JSON.parse(stored);
+        iniciarInterfaz();
+      }
+    }
+
+    function cerrarSesion() {
+      localStorage.removeItem('novovet_user');
+      location.reload();
+    }
+
+    function iniciarInterfaz() {
+      document.getElementById('loginModal').style.display = 'none';
+
+      const inputVendedor = document.getElementById('filtroVendedor');
+      const btnNuevaMeta = document.getElementById('btnNuevaMeta');
+      const btnAccesos = document.getElementById('btnGestionAccesos');
+      const lblRol = document.getElementById('lblUsuarioRol');
+
+      if (usuarioSesion.rol === 'admin') {
+        lblRol.innerText = 'VENDEDOR: ADMINISTRADOR';
+        inputVendedor.disabled = false;
+        btnNuevaMeta.style.display = 'inline-block';
+        btnAccesos.style.display = 'inline-flex';
+      } else {
+        lblRol.innerText = `VENDEDOR: ${usuarioSesion.nombre.toUpperCase()}`;
+        inputVendedor.value = usuarioSesion.vendedor_vinculado || usuarioSesion.nombre;
+        inputVendedor.disabled = true;
+        btnNuevaMeta.style.display = 'none';
+        btnAccesos.style.display = 'none';
       }
 
-      // Gráfico ajustado a contenedor flexible
-      const ctx = document.getElementById('dailyChart').getContext('2d');
-      const labels = data.resumen.evolucionDiaria.map(item => item.dia);
-      const montos = data.resumen.evolucionDiaria.map(item => item.monto);
+      inicializarFechasFiltro();
+      cargarResumen();
+    }
 
-      if (myChart) {
-        myChart.destroy();
+    // --- GESTIÓN DE ACCESOS Y VENDEDORES ---
+    async function obtenerListaVendedores() {
+      try {
+        const res = await fetch('/api/vendedores/lista');
+        return await res.json();
+      } catch (error) {
+        console.error('Error al obtener lista de vendedores:', error);
+        return [];
       }
+    }
 
-      myChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Ventas Diarias',
-            data: montos,
-            borderColor: '#059669',
-            backgroundColor: 'rgba(5, 150, 105, 0.05)',
-            borderWidth: 2.5,
-            tension: 0.3,
-            fill: true,
-            pointBackgroundColor: '#059669',
-            pointRadius: 3,
-            pointHoverRadius: 5
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: function(value) {
-                  return value.toLocaleString('es-CL');
-                }
-              },
-              grid: { color: '#f1f5f9' }
-            },
-            x: {
-              grid: { color: '#f1f5f9' }
-            }
-          }
-        }
+    async function cargarSelectVendedores() {
+      const select = document.getElementById('accVinculado');
+      if (!select) return;
+
+      const vendedores = await obtenerListaVendedores();
+      select.innerHTML = '<option value="">-- Sin Vincular --</option>';
+
+      vendedores.forEach(vendedor => {
+        const option = document.createElement('option');
+        option.value = vendedor;
+        option.textContent = vendedor;
+        select.appendChild(option);
       });
     }
 
-    cargarDatos();
-  </script>
-</body>
+    async function abrirModalAccesos() {
+      document.getElementById('modalAccesos').style.display = 'flex';
+      await cargarSelectVendedores();
+      cargarListaUsuarios();
+    }
+
+    function cerrarModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    async function cargarListaUsuarios() {
+      const cont = document.getElementById('listaUsuariosRegistrados');
+      cont.innerHTML = '<div style="font-size:12px; color:#64748b;">Cargando usuarios...</div>';
+      try {
+        const res = await fetch('/api/usuarios');
+        const usuarios = await res.json();
+        cont.innerHTML = '';
+        usuarios.forEach(u => {
+          cont.innerHTML += `
+            <div class="user-list-item">
+              <div>
+                <b>${u.nombre}</b> <span style="color:#64748b;">(${u.email})</span>
+              </div>
+              <span class="badge-meta">${u.rol.toUpperCase()}</span>
+            </div>
+          `;
+        });
+      } catch (err) {
+        cont.innerHTML = '<div style="font-size:12px; color:red;">Error al cargar usuarios.</div>';
+      }
+    }
+
+    async function guardarUsuarioAcceso(e) {
+      e.preventDefault();
+      const payload = {
+        nombre: document.getElementById('accNombre').value,
+        email: document.getElementById('accEmail').value,
+        password: document.getElementById('accPass').value,
+        rol: document.getElementById('accRol').value,
+        vendedor_vinculado: document.getElementById('accVinculado').value
+      };
+
+      try {
+        const res = await fetch('/api/usuarios/guardar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        alert('Usuario guardado exitosamente');
+        cargarListaUsuarios();
+      } catch (err) {
+        alert('Error: ' + err.message);
+      }
+    }
+
+    // --- CARGA DE DATOS Y DASHBOARD ---
+    function inicializarFechasFiltro() {
+      const hoy = new Date();
+      const anio = hoy.getFullYear();
+      const mesNum = hoy.getMonth() + 1;
+      const mes = String(mesNum).padStart(2, '0');
+      const inicio = `${anio}-${mes}-01`;
+      const ultimoDia = new Date(anio, mesNum, 0).getDate();
+      const fin = `${anio}-${mes}-${String(ultimoDia).padStart(2, '0')}`;
+
+      document.getElementById('filtroDesde').value = inicio;
+      document.getElementById('filtroHasta').value = fin;
+
+      const selectMes = document.getElementById('selectMesMetas');
+      if (selectMes) selectMes.value = mesNum;
+
+      const selectAnio = document.getElementById('selectAnioMetas');
+      if (selectAnio) selectAnio.value = anio;
+    }
+
+    function cambiarTab(tab, element) {
+      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+      element.classList.add('active');
+
+      document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
+      const targetView = document.getElementById(`view-${tab}`);
+      if (targetView) targetView.classList.add('active');
+
+      tabActual = tab;
+      if (tab === 'detalle' && !document.getElementById('filtroDesde').value) {
+        inicializarFechasFiltro();
+      } else if (tab === 'metas') {
+        cargarMetas();
+      }
+    }
+
+    async function recargarActual() {
+      if (tabActual === 'resumen') await cargarResumen();
+      else if (tabActual === 'metas') await cargarMetas();
+      else if (tabActual === 'detalle') await consultarDetalle(paginaActual);
+    }
+
+async function cargarResumen() {
+  try {
+    const rolParam = usuarioSesion ? usuarioSesion.rol : '';
+    const meParam = usuarioSesion ? (usuarioSesion.vendedor_vinculado || usuarioSesion.nombre) : '';
+
+    const hoy = new Date();
+    const anio = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+
+    // Consultamos las ventas del mes y las metas en paralelo
+    const [resVentas, resMetas] = await Promise.all([
+      fetch(`/api/ventas/mes-actual?anio=${anio}&mes=${mes}&rol=${rolParam}&vendedorLogueado=${encodeURIComponent(meParam)}`),
+      fetch(`/api/ventas/metas?anio=${anio}&mes=${Number(mes)}`)
+    ]);
+
+    if (!resVentas.ok) throw new Error(`HTTP error! status: ${resVentas.status}`);
+
+    const dataVentas = await resVentas.json();
+    const dataMetas = await resMetas.json();
+
+    if (dataVentas && dataVentas.resumen) {
+      renderizarResumen(dataVentas, Array.isArray(dataMetas) ? dataMetas : []);
+    }
+  } catch (err) {
+    console.error('Error en cargarResumen:', err);
+  }
+}
+
+function renderizarResumen(data, listaMetas) {
+  // 1. KPI Venta Total
+  document.getElementById('montoTotal').innerText = `$${Math.round(Number(data.resumen.totalVendido)).toLocaleString('es-CL')}`;
+
+  // 2. Ranking de Vendedores
+  const contRanking = document.getElementById('listaRanking');
+  contRanking.innerHTML = '';
+  if (data.resumen.vendedores) {
+    data.resumen.vendedores.forEach(item => {
+      contRanking.innerHTML += `
+        <div class="ranking-item">
+          <span style="text-transform:lowercase;">${item.vendedor}</span>
+          <b>$${Math.round(Number(item.monto)).toLocaleString('es-CL')}</b>
+        </div>
+      `;
+    });
+  }
+
+  // 3. Renderizado de Tarjetas de Avance de Vendedores (KPI Cards)
+  const contTarjetas = document.getElementById('gridTarjetasVendedores');
+  if (contTarjetas) {
+    contTarjetas.innerHTML = '';
+
+    if (listaMetas.length === 0) {
+      contTarjetas.innerHTML = '<div style="font-size:12px; color:#64748b; grid-column: 1/-1;">No hay metas registradas para este mes.</div>';
+    } else {
+      listaMetas.forEach(m => {
+        const pct = Number(m.porcentajeMes) || 0;
+        
+        // Asignación dinámica de color según % de cumplimiento
+        let colorStatus = '#dc2626'; // Rojo (< 50%)
+        let bgStatus = '#fef2f2';
+        if (pct >= 100) {
+          colorStatus = '#059669'; // Verde (>= 100%)
+          bgStatus = '#ecfdf5';
+        } else if (pct >= 50) {
+          colorStatus = '#d97706'; // Naranja (50% - 99%)
+          bgStatus = '#fffbe0';
+        }
+
+        const anchoBarra = Math.min(pct, 100); // Límite visual al 100%
+
+        contTarjetas.innerHTML += `
+          <div class="seller-kpi-card">
+            <div class="seller-kpi-header">
+              <span class="seller-kpi-name">${m.vendedor.toLowerCase()}</span>
+              <span class="seller-kpi-badge" style="background:${bgStatus}; color:${colorStatus};">
+                ${pct}%
+              </span>
+            </div>
+            
+            <div class="seller-kpi-amounts">
+              <div>Vendido: <b>$${Math.round(m.vendidoMes).toLocaleString('es-CL')}</b></div>
+              <div>Meta: $${Math.round(m.metaMensual).toLocaleString('es-CL')}</div>
+            </div>
+
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" style="width: ${anchoBarra}%; background-color: ${colorStatus};"></div>
+            </div>
+          </div>
+        `;
+      });
+    }
+  }
+
+  // 4. Gráfico Diario
+  const ctx = document.getElementById('dailyChart').getContext('2d');
+  if (myChart) myChart.destroy();
+
+  myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.resumen.evolucionDiaria.map(i => i.dia),
+      datasets: [{
+        label: 'Ventas',
+        data: data.resumen.evolucionDiaria.map(i => i.monto),
+        borderColor: '#059669',
+        backgroundColor: 'rgba(5, 150, 105, 0.05)',
+        borderWidth: 2.5,
+        tension: 0.3,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+}
+
+    async function cargarMetas() {
+      const mes = document.getElementById('selectMesMetas').value;
+      const anio = document.getElementById('selectAnioMetas').value;
+      const body = document.getElementById('bodyMetas');
+      const head = document.getElementById('headMetas');
+      
+      body.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">Cargando información...</td></tr>';
+
+      try {
+        const res = await fetch(`/api/ventas/metas?anio=${anio}&mes=${mes}`);
+        let data = await res.json();
+
+        if (!Array.isArray(data) || data.length === 0) {
+          body.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">No hay metas registradas.</td></tr>';
+          return;
+        }
+
+        if (usuarioSesion && usuarioSesion.rol === 'vendedor') {
+          const miNombre = (usuarioSesion.vendedor_vinculado || usuarioSesion.nombre).toLowerCase();
+          data = data.filter(d => (d.vendedor || '').toLowerCase().includes(miNombre));
+        }
+
+        const primerItem = data[0];
+        let thSemanas = '';
+        primerItem.semanas.forEach(s => {
+          thSemanas += `
+            <th style="text-align:center;">
+              ${s.label}
+              <span class="sub-dias-habiles">${s.diasHabiles} días hábiles</span>
+            </th>`;
+        });
+
+        head.innerHTML = `
+          <tr>
+            <th>Vendedor</th>
+            <th style="text-align:right;">Meta Mensual</th>
+            ${thSemanas}
+            <th style="text-align:right;">Venta Total</th>
+            <th style="text-align:center;">% Avance Mes</th>
+          </tr>
+        `;
+
+        body.innerHTML = '';
+        data.forEach(item => {
+          const pctMes = Number(item.porcentajeMes) || 0;
+          const colorPctMes = pctMes >= 100 ? '#059669' : (pctMes >= 50 ? '#d97706' : '#dc2626');
+
+          const celdasSemanas = item.semanas.map(sem => {
+            const colorPct = sem.pct >= 100 ? '#059669' : '#dc2626';
+            const bgPct = sem.pct >= 100 ? '#ecfdf5' : '#fef2f2';
+            return `
+              <td style="text-align:center; vertical-align:middle;">
+                <div style="font-weight:700; font-size:13px; color:#1e293b;">$${sem.vendido.toLocaleString('es-CL')}</div>
+                <div style="font-size:10px; color:#64748b;">Meta: $${sem.metaTramo.toLocaleString('es-CL')}</div>
+                <div style="margin-top:3px;"><span style="background:${bgPct}; color:${colorPct}; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">${sem.pct}%</span></div>
+              </td>
+            `;
+          }).join('');
+
+          body.innerHTML += `
+            <tr>
+              <td><b>${item.vendedor}</b></td>
+              <td style="text-align:right; font-weight:600;">$${item.metaMensual.toLocaleString('es-CL')}</td>
+              ${celdasSemanas}
+              <td style="text-align:right; font-weight:700;">$${item.vendidoMes.toLocaleString('es-CL')}</td>
+              <td style="text-align:center;">
+                <span style="background:${colorPctMes}15; color:${colorPctMes}; font-weight:800; padding:4px 8px; border-radius:6px;">${pctMes}%</span>
+              </td>
+            </tr>
+          `;
+        });
+
+      } catch (err) {
+        body.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red; padding:20px;">Error: ${err.message}</td></tr>`;
+      }
+    }
+
+    // --- MODAL Y GUARDADO MASIVO DE METAS ---
+    async function modalCargarMeta() {
+      const mes = document.getElementById('selectMesMetas').value;
+      const anio = document.getElementById('selectAnioMetas').value;
+      const cont = document.getElementById('contenedorListaMetas');
+
+      cont.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">Cargando lista de vendedores...</div>';
+      document.getElementById('modalMeta').style.display = 'flex';
+
+      try {
+        const [resVend, resMetas] = await Promise.all([
+          fetch('/api/vendedores/lista'),
+          fetch(`/api/ventas/metas?anio=${anio}&mes=${mes}`)
+        ]);
+
+        const vendedores = await resVend.json();
+        const dataMetas = await resMetas.json();
+
+        const metasExistentes = {};
+        if (Array.isArray(dataMetas)) {
+          dataMetas.forEach(item => {
+            metasExistentes[item.vendedor.toLowerCase().trim()] = item.metaMensual;
+          });
+        }
+
+        cont.innerHTML = '';
+        vendedores.forEach(vendedor => {
+          const metaActual = metasExistentes[vendedor.toLowerCase().trim()] || '';
+
+          cont.innerHTML += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9;">
+              <label style="font-weight:600; font-size:14px; color:#334155; text-transform:capitalize; width:50%;">
+                ${vendedor.toLowerCase()}
+              </label>
+              <div style="width:50%;">
+                <input 
+                  type="number" 
+                  class="input-meta-vendedor" 
+                  data-vendedor="${vendedor}" 
+                  placeholder="Ej: 15000000" 
+                  value="${metaActual}"
+                  style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px; font-weight:600; color:#0f172a;"
+                />
+              </div>
+            </div>
+          `;
+        });
+
+      } catch (err) {
+        cont.innerHTML = `<div style="color:red; text-align:center;">Error al cargar datos: ${err.message}</div>`;
+      }
+    }
+
+    async function guardarMetasMasivas(e) {
+      e.preventDefault();
+      const mes = document.getElementById('selectMesMetas').value;
+      const anio = document.getElementById('selectAnioMetas').value;
+
+      const inputs = document.querySelectorAll('.input-meta-vendedor');
+      const payloadMetas = [];
+
+      inputs.forEach(input => {
+        const vendedor = input.getAttribute('data-vendedor');
+        const meta = input.value;
+        if (vendedor) {
+          payloadMetas.push({ vendedor, meta });
+        }
+      });
+
+      try {
+        const res = await fetch('/api/ventas/metas/guardar-masivo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anio, mes, metas: payloadMetas })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          alert("¡Todas las metas fueron actualizadas con éxito!");
+          cerrarModal('modalMeta');
+          cargarMetas();
+        } else {
+          alert("Error: " + data.error);
+        }
+      } catch (err) {
+        alert("Error de conexión: " + err.message);
+      }
+    }
+
+    async function consultarDetalle(pag = 1) {
+      paginaActual = pag;
+      const desde = document.getElementById('filtroDesde').value;
+      const hasta = document.getElementById('filtroHasta').value;
+      const vendedor = document.getElementById('filtroVendedor').value;
+      const busqueda = document.getElementById('filtroBuscar').value;
+
+      const body = document.getElementById('bodyDetalle');
+      body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Cargando lista de ventas...</td></tr>';
+
+      try {
+        const rolParam = usuarioSesion ? usuarioSesion.rol : '';
+        const meParam = usuarioSesion ? (usuarioSesion.vendedor_vinculado || usuarioSesion.nombre) : '';
+        
+        const url = `/api/ventas/detalle?desde=${desde}&hasta=${hasta}&vendedor=${encodeURIComponent(vendedor)}&busqueda=${encodeURIComponent(busqueda)}&pagina=${paginaActual}&limite=100&rol=${rolParam}&vendedorLogueado=${encodeURIComponent(meParam)}`;
+        
+        const res = await fetch(url);
+        const data = await res.json();
+
+        body.innerHTML = '';
+        if (!data.detalle || data.detalle.length === 0) {
+          body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No se encontraron registros.</td></tr>';
+        } else {
+          data.detalle.forEach(row => {
+            body.innerHTML += `
+              <tr>
+                <td>${row.fecha}</td>
+                <td style="text-transform:lowercase;">${row.vendedor}</td>
+                <td><b>${row.cliente}</b></td>
+                <td style="text-align:center;"><span class="doc-pill">${row.doc}</span></td>
+                <td style="text-align:right; font-weight:700;">$${row.monto.toLocaleString('es-CL')}</td>
+              </tr>
+            `;
+          });
+          totalPaginas = data.totalPaginas || 1;
+          document.getElementById('totalFiltradoDetalle').innerText = `${data.totalRegistros.toLocaleString('es-CL')} registros encontrados`;
+          actualizarControlesPaginacion(data.totalRegistros, data.paginaActual, totalPaginas);
+        }
+
+      } catch (err) {
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red; padding:20px;">Error al consultar detalle.</td></tr>';
+      }
+    }
+
+    function cambiarPagina(delta) {
+      const nuevaPag = paginaActual + delta;
+      if (nuevaPag >= 1 && nuevaPag <= totalPaginas) consultarDetalle(nuevaPag);
+    }
+
+    function actualizarControlesPaginacion(total, pag, max) {
+      document.getElementById('paginationInfo').innerText = `Página ${pag} de ${max}`;
+      document.getElementById('btnPrev').disabled = (pag <= 1);
+      document.getElementById('btnNext').disabled = (pag >= max);
+    }
+
+    comprobarSesion();
+</script></body>
 </html>
