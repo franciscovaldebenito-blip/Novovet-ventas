@@ -4,939 +4,762 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NOVOVET Analytics</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<style>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+    body { background-color: #f1f5f9; color: #1e293b; min-height: 100vh; font-size: 13px; }
+    
+    /* LOGIN */
+    #screen-login { position: fixed; inset: 0; background: #1e293b; display: flex; justify-content: center; align-items: center; z-index: 2000; }
+    .login-box { background: #ffffff; width: 100%; max-width: 380px; padding: 32px 28px; border-radius: 12px; text-align: center; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.2); }
+    .login-box h2 { color: #059669; font-size: 24px; font-weight: 800; }
+    .login-box p { color: #64748b; font-size: 13px; margin: 4px 0 20px 0; }
+    .login-input { width: 100%; padding: 10px 12px; margin-bottom: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; outline: none; background: #f8fafc; }
+    .login-input:focus { border-color: #059669; background: #fff; }
+    .btn-login { width: 100%; padding: 11px; background: #059669; color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+    .btn-login:hover { background: #047857; }
 
+    /* PANEL PRINCIPAL */
+    header { background: #ffffff; border-bottom: 1px solid #e2e8f0; padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+    .brand h1 { font-size: 18px; font-weight: 800; color: #059669; line-height: 1.2; }
+    .brand span { font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; }
+    
+    nav { display: flex; gap: 4px; background: #f1f5f9; padding: 4px; border-radius: 8px; }
+    .nav-btn { border: none; background: transparent; padding: 8px 16px; font-size: 12px; font-weight: 700; color: #64748b; border-radius: 6px; cursor: pointer; transition: all 0.2s; }
+    .nav-btn.active { background: #ffffff; color: #059669; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    
+    .actions { display: flex; gap: 8px; align-items: center; }
+    .btn-action { border: 1px solid #cbd5e1; background: #ffffff; padding: 7px 14px; font-size: 12px; font-weight: 600; color: #334155; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
+    .btn-action:hover { background: #f8fafc; }
+    .btn-danger { background: #fff5f5; border-color: #fca5a5; color: #dc2626; }
+    .btn-danger:hover { background: #fee2e2; }
+    
+    main { padding: 20px 24px; max-width: 1440px; margin: 0 auto; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
 
-/* GRID DE TARJETAS DE METAS DE VENDEDORES */
-.kpi-cards-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
-  margin-top: 20px;
-}
+    /* FILTROS Y CONTENEDORES */
+    .filter-bar { background: #ffffff; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 16px; display: flex; gap: 12px; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    .filter-group { display: flex; align-items: center; gap: 8px; }
+    .filter-group label { font-size: 12px; font-weight: 600; color: #64748b; }
+    select, input[type="text"], input[type="number"] { padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none; background: #fff; }
+    select:focus, input:focus { border-color: #059669; }
 
-.seller-kpi-card {
-  background: var(--card-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-}
-
-.seller-kpi-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.seller-kpi-name {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--text-main);
-  text-transform: capitalize;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.seller-kpi-badge {
-  font-size: 11px;
-  font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 6px;
-}
-
-.seller-kpi-amounts {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-
-.seller-kpi-amounts b {
-  color: var(--text-main);
-}
-
-/* Barra de Progreso */
-.progress-bar-bg {
-  width: 100%;
-  height: 6px;
-  background-color: #f1f5f9;
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.progress-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.4s ease;
-}
-    :root {
-      --bg-body: #f8fafc;
-      --card-bg: #ffffff;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --green-primary: #059669;
-      --border-color: #e2e8f0;
+    /* ESTRUCTURA PRINCIPAL DEL RESUMEN */
+    .grid-summary { display: grid; grid-template-columns: 280px 1fr; gap: 16px; align-items: start; }
+    
+    .card { background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); display: flex; flex-direction: column; }
+    .card-kpi { border-left: 4px solid #059669; }
+    .kpi-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.3px; }
+    .kpi-value { font-size: 22px; font-weight: 800; color: #059669; margin: 4px 0; }
+    
+    /* CONTENEDOR INTEGRADO DEL GRÁFICO + TARJETAS */
+    .main-chart-card { background: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+    
+    /* TARJETAS DE VENDEDORES COMPACTAS */
+    .vendedores-grid-compact { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); 
+      gap: 12px; 
+      margin-top: 20px; 
+      padding-top: 16px; 
+      border-top: 1px solid #f1f5f9; 
+    }
+    
+    .card-vendedor-compact { 
+      background: #ffffff; 
+      border-radius: 8px; 
+      border: 1px solid #e2e8f0; 
+      border-left: 3px solid #059669; 
+      padding: 10px 12px; 
+      cursor: pointer; 
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .card-vendedor-compact:hover { 
+      border-color: #059669; 
+      box-shadow: 0 4px 10px rgba(5, 150, 105, 0.08); 
+      transform: translateY(-2px); 
+    }
+    .card-vendedor-compact.selected { 
+      background: #f0fdf4; 
+      border-color: #059669; 
+      box-shadow: inset 0 0 0 1px #059669;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-    body { background-color: var(--bg-body); color: var(--text-main); }
+    .v-header { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .v-monto { font-size: 16px; font-weight: 800; color: #059669; margin: 2px 0 4px 0; }
+    .v-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 2px; }
+    .v-meta { font-size: 10px; color: #64748b; font-weight: 500; }
 
-    /* MODALES & OVERLAYS */
-    .login-overlay, .modal-overlay {
-      position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85);
-      display: flex; align-items: center; justify-content: center; z-index: 1000;
-      backdrop-filter: blur(4px);
-    }
-    .login-card {
-      background: #ffffff; padding: 35px 30px; border-radius: 16px;
-      width: 100%; max-width: 360px; text-align: center;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-    }
-    .modal-card {
-      background: #ffffff; padding: 30px; border-radius: 16px;
-      width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); text-align: left;
-    }
-    .login-input, .modal-input {
-      width: 100%; padding: 10px 12px; margin-bottom: 12px;
-      border: 1px solid var(--border-color); border-radius: 8px; font-size: 13px; outline: none;
-    }
+    .badge-pct { display: inline-block; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; }
+    .badge-success { background: #dcfce7; color: #15803d; }
+    .badge-warning { background: #fef3c7; color: #b45309; }
+    .badge-danger { background: #fee2e2; color: #991b1b; }
+    
+    .table-container { background: #fff; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+    th { background: #f8fafc; padding: 10px 14px; text-align: left; font-weight: 700; color: #475569; border-bottom: 1px solid #e2e8f0; }
+    td { padding: 10px 14px; border-bottom: 1px solid #f1f5f9; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    tr:last-child td { border-bottom: none; }
+    .num { text-align: right; width: 140px; }
+    .center { text-align: center; }
+    .subtext { font-size: 10px; color: #94a3b8; display: block; margin-top: 1px; }
 
-    /* HEADER */
-    .navbar-header {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0.85rem 2rem; background-color: var(--card-bg);
-      border-bottom: 1px solid var(--border-color);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-      position: sticky; top: 0; z-index: 100;
-    }
-    .brand-container { display: flex; flex-direction: column; }
-    .brand-title { font-size: 1.25rem; font-weight: 800; color: var(--green-primary); letter-spacing: -0.02em; }
-    .brand-title span { font-weight: 300; color: var(--text-main); }
-    .vendedor-subtitle { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-
-    /* PESTAÑAS */
-    .nav-tabs { display: flex; gap: 0.35rem; background: #f1f5f9; padding: 0.25rem; border-radius: 9999px; border: 1px solid var(--border-color); }
-    .nav-tab { border: none; background: transparent; padding: 0.45rem 1.25rem; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); border-radius: 9999px; cursor: pointer; transition: all 0.2s ease; text-transform: uppercase; }
-    .nav-tab.active { background-color: var(--card-bg); color: var(--green-primary); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
-
-    .header-right { display: flex; align-items: center; gap: 10px; }
-    .btn-refresh, .btn-logout, .btn-secondary {
-      display: flex; align-items: center; gap: 0.5rem; background-color: var(--card-bg);
-      color: var(--text-main); border: 1px solid var(--border-color); padding: 0.45rem 0.9rem;
-      border-radius: 9999px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
-    }
-    .btn-logout { color: #dc2626; border-color: #fecaca; }
-
-    /* CONTENEDOR PRINCIPAL */
-    .main-body { padding: 20px 30px; }
-    .view-section { display: none; }
-    .view-section.active { display: block; }
-
-    /* CARDS Y TABLAS */
-    .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
-    .dashboard-grid { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 20px; align-items: start; }
-    .kpi-total-card { border-left: 4px solid var(--green-primary); text-align: center; padding: 20px 15px; margin-bottom: 15px; }
-    .kpi-total-card label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-    .kpi-total-card .amount { font-size: 28px; font-weight: 800; color: var(--green-primary); margin: 6px 0; }
-    .badge-meta { background: #ecfdf5; color: var(--green-primary); font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 12px; display: inline-block; }
-
-    .ranking-card h3 { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
-    /* Se elimina el scroll y la limitación de altura para mostrar toda la lista completa */
-    .ranking-list { display: flex; flex-direction: column; }
-    .ranking-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
-
-    /* Reducción de altura del gráfico */
-    .chart-container { position: relative; height: 240px; width: 100%; }
-
-    .filter-bar { display: flex; gap: 12px; align-items: flex-end; margin-bottom: 16px; flex-wrap: wrap; }
-    .filter-group { display: flex; flex-direction: column; gap: 4px; }
-    .filter-group label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; }
-    .filter-group input, .filter-group select { padding: 7px 10px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 12px; outline: none; background: white; }
-
-    .btn-buscar { background: var(--green-primary); color: white; border: none; padding: 7px 16px; border-radius: 8px; font-weight: 700; font-size: 12px; cursor: pointer; height: 33px; }
-    .total-badge-detalle { margin-left: auto; background: #ecfdf5; color: var(--green-primary); border: 1px solid #a7f3d0; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 20px; }
-
-    .table-container { max-height: 440px; overflow-y: auto; }
-    table.detalle-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-    table.detalle-table th { position: sticky; top: 0; background: #f8fafc; text-align: left; padding: 10px 8px; color: var(--text-muted); font-weight: 700; font-size: 11px; border-bottom: 2px solid var(--border-color); }
-    table.detalle-table td { padding: 10px 8px; border-bottom: 1px solid #f1f5f9; color: #334155; }
-    .doc-pill { background: #f1f5f9; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; color: #475569; }
-
-    .pagination-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid var(--border-color); }
-    .pagination-btn { background: #ffffff; border: 1px solid var(--border-color); padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; color: var(--text-main); }
-    .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .pagination-info { font-size: 12px; font-weight: 600; color: var(--text-muted); }
-
-    .sub-dias-habiles { font-size: 9px; font-weight: 600; color: var(--green-primary); display: block; margin-top: 2px; }
-    .user-list-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+    .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(2px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+    .modal-box { background: #fff; width: 100%; max-width: 480px; border-radius: 12px; padding: 20px 24px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.15); }
   </style>
 </head>
 <body>
 
-  <!-- 0. PANTALLA LOGIN -->
-  <div id="loginModal" class="login-overlay">
-    <div class="login-card">
-      <h2 style="color:var(--green-primary); margin-bottom:4px;">NOVOVET</h2>
-      <p style="font-size:12px; color:var(--text-muted); margin-bottom:20px;">Acceso al Panel Analytics</p>
-
-      <form onsubmit="ejecutarLogin(event)">
-        <input type="email" id="loginEmail" class="login-input" placeholder="Correo institucional" required>
-        <input type="password" id="loginPass" class="login-input" placeholder="Contraseña" required>
-        <button type="submit" class="btn-buscar" style="width:100%; height:38px; margin-top:5px;">Ingresar</button>
-      </form>
+  <!-- LOGIN -->
+  <div id="screen-login">
+    <div class="login-box">
+      <h2>NOVOVET</h2>
+      <p>Acceso al Panel Analytics</p>
+      <input type="email" id="loginEmail" class="login-input" placeholder="correo@novovet.cl">
+      <input type="password" id="loginPassword" class="login-input" placeholder="••••••••">
+      <button class="btn-login" onclick="iniciarSesion()">Ingresar</button>
     </div>
   </div>
 
-  <!-- MODAL 1: GESTIÓN DE ACCESOS (ADMIN) -->
-  <div id="modalAccesos" class="modal-overlay" style="display:none;">
-    <div class="modal-card">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-        <h3 style="font-size:16px; font-weight:700;">Gestión de Accesos</h3>
-        <button onclick="cerrarModal('modalAccesos')" style="border:none; background:none; font-size:18px; cursor:pointer;">✕</button>
+  <!-- PANEL -->
+  <div id="screen-app" style="display: none;">
+    <header>
+      <div class="brand">
+        <h1>NOVOVET Analytics</h1>
+        <span id="txtRol">ROL: ADMINISTRADOR</span>
       </div>
 
-      <form onsubmit="guardarUsuarioAcceso(event)">
-        <input type="text" id="accNombre" class="modal-input" placeholder="Nombre Completo" required>
-        <input type="email" id="accEmail" class="modal-input" placeholder="Correo Electrónico" required>
-        <input type="password" id="accPass" class="modal-input" placeholder="Contraseña">
-        <select id="accRol" class="modal-input">
-          <option value="VENDEDOR">Rol: Vendedor</option>
-          <option value="ADMIN">Rol: Administrador</option>
-        </select>
-        <select id="accVinculado" class="modal-input">
-          <option value="">Cargando vendedores...</option>
-        </select>
+      <nav>
+        <button class="nav-btn active" onclick="cambiarPestana('resumen', this)">RESUMEN</button>
+        <button class="nav-btn" onclick="cambiarPestana('metas', this)">METAS</button>
+        <button class="nav-btn" onclick="cambiarPestana('detalle', this)">VENTA DETALLE</button>
+        <button class="nav-btn" onclick="cambiarPestana('proveedores', this)">PROVEEDORES</button>
+      </nav>
 
-        <button type="submit" class="btn-buscar" style="width:100%; height:36px;">Guardar Usuario</button>
-      </form>
-
-      <h4 style="font-size:13px; font-weight:700; margin-top:20px; margin-bottom:10px;">Usuarios Registrados</h4>
-      <div id="listaUsuariosRegistrados" style="max-height: 200px; overflow-y:auto;"></div>
-    </div>
-  </div>
-
-<!-- MODAL DE ASIGNACIÓN MASIVA DE METAS -->
-<div id="modalMeta" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
-  <div style="background:#fff; border-radius:12px; width:450px; max-width:90%; padding:24px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
-    
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-      <h3 style="margin:0; font-size:18px; color:#0f172a;">Asignar Metas Mensuales</h3>
-      <button onclick="cerrarModal('modalMeta')" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748b;">&times;</button>
-    </div>
-
-    <form onsubmit="guardarMetasMasivas(event)">
-      <div id="contenedorListaMetas" style="max-height:350px; overflow-y:auto; padding-right:8px; margin-bottom:20px;">
-        <!-- Aquí se renderizan los vendedores con sus inputs -->
+      <div class="actions">
+        <button class="btn-action" id="btnAccesos" onclick="abrirModalAccesos()">Accesos</button>
+        <button class="btn-action" onclick="recargarActual(true)">Actualizar</button>
+        <button class="btn-action btn-danger" onclick="cerrarSesion()">Salir</button>
       </div>
+    </header>
 
-      <button type="submit" style="width:100%; background:#0284c7; color:#fff; border:none; padding:12px; border-radius:8px; font-weight:700; cursor:pointer;">
-        Guardar Todas las Metas
-      </button>
-    </form>
-
-  </div>
-</div>
-
-  <!-- HEADER -->
-  <header class="navbar-header">
-    <div class="brand-container">
-      <div class="brand-title">NOVOVET <span>Analytics</span></div>
-      <div class="vendedor-subtitle" id="lblUsuarioRol">VENDEDOR: CARGANDO...</div>
-    </div>
-
-    <nav class="nav-tabs">
-      <button class="nav-tab active" onclick="cambiarTab('resumen', this)">RESUMEN</button>
-      <button class="nav-tab" onclick="cambiarTab('metas', this)">METAS</button>
-      <button class="nav-tab" onclick="cambiarTab('detalle', this)">VENTA DETALLE</button>
-    </nav>
-
-    <div class="header-right">
-      <button id="btnGestionAccesos" class="btn-secondary" style="display:none; color:var(--green-primary); border-color:var(--green-primary);" onclick="abrirModalAccesos()">Accesos</button>
-      <button id="btnRefresh" class="btn-refresh" onclick="recargarActual()" title="Actualizar datos">Actualizar</button>
-      <button class="btn-logout" onclick="cerrarSesion()">Salir</button>
-    </div>
-  </header>
-
-  <main class="main-body">
-
-    <!-- VISTA 1: RESUMEN -->
-<div id="view-resumen" class="view-section active">
-  <div class="dashboard-grid">
-    <div>
-      <div class="card kpi-total-card">
-        <label>VENTA TOTAL MES</label>
-        <div class="amount" id="montoTotal">$0</div>
-        <div class="badge-meta">En ejecución</div>
-      </div>
-      <div class="card ranking-card">
-        <h3 id="tituloRanking">Ranking de Ventas</h3>
-        <div class="ranking-list" id="listaRanking">
-          <div class="ranking-item"><span>Cargando...</span></div>
-        </div>
-      </div>
-    </div>
-    <div class="card">
-      <h3 style="font-size:15px; font-weight:700; margin-bottom:15px;">Evolución Diaria del Mes</h3>
-      <div class="chart-container">
-        <canvas id="dailyChart"></canvas>
-      </div>
-
-      <!-- CONTENEDOR PARA LAS TARJETAS DE AVANCE DE VENDEDORES -->
-      <div id="gridTarjetasVendedores" class="kpi-cards-grid">
-        <!-- Se puebla dinámicamente desde JavaScript -->
-      </div>
-    </div>
-  </div>
-</div>
-
-    <!-- VISTA 2: METAS -->
-    <div id="view-metas" class="view-section">
-      <div class="card">
-        <div class="filter-bar">
-          <div style="display:flex; align-items:center; gap:12px;">
-            <h3 style="font-size:16px; font-weight:700;">Cumplimiento de Metas</h3>
-            <div class="filter-group">
-              <label>MES</label>
-              <select id="selectMesMetas" onchange="cargarMetas()">
-                <option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option>
-                <option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option>
-                <option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option>
-                <option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option>
-              </select>
+    <main>
+      <!-- 1. RESUMEN -->
+      <section id="tab-resumen" class="tab-content active">
+        <div class="grid-summary">
+          <!-- COLUMNA IZQUIERDA -->
+          <div style="display:flex; flex-direction:column; gap:12px;">
+            <div class="card card-kpi">
+              <div class="kpi-title" id="lblKpiTotal">TOTAL VENDIDO MES ACTUAL</div>
+              <div class="kpi-value" id="kpiTotalVendido">$0</div>
+              <span style="font-size: 11px; color:#059669; font-weight:600;">Actualización instantánea</span>
             </div>
-            <div class="filter-group">
-              <label>AÑO</label>
-              <select id="selectAnioMetas" onchange="cargarMetas()">
-                <option value="2026" selected>2026</option>
-                <option value="2025">2025</option>
-              </select>
+
+            <div class="card">
+              <h3 style="font-size:11px; font-weight:700; margin-bottom:10px; color:#64748b; text-transform:uppercase;" id="lblRanking">Ranking Vendedores</h3>
+              <div id="listaRankingVendedores"></div>
             </div>
           </div>
 
-          <!-- BOTÓN SOLO VISIBLE PARA ADMIN -->
-          <button id="btnNuevaMeta" class="btn-buscar" style="display:none; background:#0284c7;" onclick="modalCargarMeta()">
-            + Asignar Meta
-          </button>
+          <!-- COLUMNA DERECHA: GRÁFICO + TARJETAS ACOMODADAS DEBAJO -->
+          <div class="main-chart-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+              <h3 id="tituloGrafico" style="font-size:13px; font-weight:700; color:#475569;">Evolución Diaria - Ventas Generales</h3>
+              <button class="btn-action" id="btnRestablecerGrafico" onclick="restablecerGraficoGeneral()">Ver Gráfico General</button>
+            </div>
+            
+            <div style="position: relative; height: 300px; width: 100%;">
+              <canvas id="chartEvolucion"></canvas>
+            </div>
+
+            <div class="vendedores-grid-compact" id="gridTarjetasVendedores"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. METAS -->
+      <section id="tab-metas" class="tab-content">
+        <div class="filter-bar">
+          <div style="font-weight:700; font-size:14px; color:#334155;">Cumplimiento de Metas</div>
+          <div class="filter-group" style="margin-left:auto;">
+            <label>MES</label>
+            <select id="selectMesMetas" onchange="consultarMetas()"></select>
+          </div>
+          <div class="filter-group">
+            <label>AÑO</label>
+            <select id="selectAnioMetas" onchange="consultarMetas()"></select>
+          </div>
+          <button class="btn-action" style="background:#0284c7; color:#fff; border:none;" id="btnAsignarMeta" onclick="abrirModalMeta()">+ Asignar Meta</button>
         </div>
 
         <div class="table-container">
-          <table class="detalle-table" id="tablaMetasContenedor">
-            <thead id="headMetas">
-              <tr>
-                <th>Vendedor</th>
-                <th style="text-align:right;">Meta Mensual</th>
-                <th style="text-align:center;">Sem 1</th><th style="text-align:center;">Sem 2</th>
-                <th style="text-align:center;">Sem 3</th><th style="text-align:center;">Sem 4</th>
-                <th style="text-align:right;">Venta Total</th>
-                <th style="text-align:center;">% Avance Mes</th>
-              </tr>
+          <table id="tablaMetas">
+            <thead>
+              <tr id="trHeaderMetas"></tr>
             </thead>
-            <tbody id="bodyMetas">
-              <tr><td colspan="8" style="text-align:center; padding:20px;">Cargando metas...</td></tr>
-            </tbody>
+            <tbody id="bodyMetas"></tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </section>
 
-    <!-- VISTA 3: VENTA DETALLE -->
-    <div id="view-detalle" class="view-section">
-      <div class="card">
+      <!-- 3. VENTA DETALLE -->
+      <section id="tab-detalle" class="tab-content">
         <div class="filter-bar">
-          <div class="filter-group">
-            <label>DESDE</label>
-            <input type="date" id="filtroDesde">
+          <div class="filter-group" id="containerFiltroVendedor">
+            <label>Vendedor:</label>
+            <select id="filtroVendedor" onchange="consultarDetalle()"><option value="">Todos los Vendedores</option></select>
           </div>
           <div class="filter-group">
-            <label>HASTA</label>
-            <input type="date" id="filtroHasta">
+            <label>Buscar Cliente:</label>
+            <input type="text" id="filtroBuscar" placeholder="Nombre cliente..." oninput="consultarDetalle()">
           </div>
           <div class="filter-group">
-            <label>VENDEDOR</label>
-            <input type="text" id="filtroVendedor" placeholder="Nombre vendedor...">
+            <label>Estado Compra:</label>
+            <select id="filtroEstadoCompra" onchange="consultarDetalle()">
+              <option value="TODOS">Todos los Clientes</option>
+              <option value="SIN_COMPRA_AGOSTO">Sin compras en Agosto ($0)</option>
+            </select>
           </div>
-          <div class="filter-group">
-            <label>BUSCAR</label>
-            <input type="text" id="filtroBuscar" placeholder="Cliente o factura...">
-          </div>
-          <button class="btn-buscar" onclick="consultarDetalle(1)">Buscar</button>
-
-          <div class="total-badge-detalle" id="totalFiltradoDetalle">0 registros encontrados</div>
         </div>
 
         <div class="table-container">
-          <table class="detalle-table">
+          <table id="tablaDetalle">
             <thead>
               <tr>
-                <th style="width: 100px;">Fecha</th>
-                <th style="width: 150px;">Vendedor</th>
-                <th>Cliente</th>
-                <th style="width: 110px; text-align: center;">Doc</th>
-                <th style="width: 130px; text-align: right;">Monto Factura</th>
+                <th style="width: auto;">Cliente</th>
+                <th id="thMes2" class="num">-</th>
+                <th id="thMes1" class="num">-</th>
+                <th id="thMesAct" class="num">-</th>
               </tr>
             </thead>
-            <tbody id="bodyDetalle">
-              <tr><td colspan="5" style="text-align:center; padding: 30px; color:#64748b;">Presiona <b>Buscar</b> para obtener transacciones.</td></tr>
-            </tbody>
+            <tbody id="bodyDetalle"></tbody>
           </table>
         </div>
+      </section>
 
-        <div class="pagination-bar">
-          <button class="pagination-btn" id="btnPrev" onclick="cambiarPagina(-1)" disabled>← Anterior</button>
-          <div class="pagination-info" id="paginationInfo">Página 1 de 1</div>
-          <button class="pagination-btn" id="btnNext" onclick="cambiarPagina(1)" disabled>Siguiente →</button>
+      <!-- 4. PROVEEDORES -->
+      <section id="tab-proveedores" class="tab-content">
+        <div class="filter-bar">
+          <div class="filter-group" id="containerFiltroVendedorProv">
+            <label>Vendedor:</label>
+            <select id="filtroVendedorProv" onchange="consultarPorProveedor()"><option value="">Todos los Vendedores</option></select>
+          </div>
+          <div class="filter-group">
+            <label>Buscar Proveedor:</label>
+            <input type="text" id="filtroBuscarProv" placeholder="Nombre proveedor..." oninput="consultarPorProveedor()">
+          </div>
         </div>
 
-      </div>
-    </div>
+        <div class="table-container">
+          <table id="tablaProveedores">
+            <thead>
+              <tr>
+                <th style="width: auto;">Proveedor / Grupo</th>
+                <th id="thMesProv2" class="num">-</th>
+                <th id="thMesProv1" class="num">-</th>
+                <th id="thMesProvAct" class="num">-</th>
+              </tr>
+            </thead>
+            <tbody id="bodyProveedor"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
 
-  </main>
+  <!-- MODAL ASIGNAR METAS -->
+  <div class="modal-overlay" id="modalMetas">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="font-size:16px;">Asignar Metas Mensuales</h3>
+        <span style="cursor:pointer; font-weight:bold; color:#64748b;" onclick="cerrarModalMeta()">✕</span>
+      </div>
+      <div id="listaEdicionMetas" style="max-height:280px; overflow-y:auto; margin-bottom:15px; padding-right:4px;"></div>
+      <button class="btn-login" onclick="guardarMetas()">Guardar Metas</button>
+    </div>
+  </div>
+
+  <!-- MODAL ACCESOS -->
+  <div class="modal-overlay" id="modalAccesos">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h3 style="font-size:16px;">Gestión de Accesos</h3>
+        <span style="cursor:pointer; font-weight:bold; color:#64748b;" onclick="cerrarModalAccesos()">✕</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:15px;">
+        <input type="text" id="accNombre" class="login-input" style="margin:0" placeholder="Nombre Completo">
+        <input type="email" id="accEmail" class="login-input" style="margin:0" placeholder="correo@novovet.cl">
+        <input type="password" id="accPass" class="login-input" style="margin:0" placeholder="••••••••">
+        <select id="accRol" class="login-input" style="margin:0">
+          <option value="ADMIN">Rol: Administrador</option>
+          <option value="VENDOR">Rol: Vendedor</option>
+        </select>
+        <select id="accVinculo" class="login-input" style="margin:0"><option value="">-- Sin Vincular --</option></select>
+        <button class="btn-login" style="background:#059669;" onclick="guardarUsuario()">Guardar Usuario</button>
+      </div>
+
+      <h4 style="font-size:12px; color:#64748b; margin-bottom:8px;">Usuarios Registrados</h4>
+      <div id="listaUsuariosRegistrados" style="max-height:160px; overflow-y:auto;"></div>
+    </div>
+  </div>
 
 <script>
-    let usuarioSesion = null;
-    let myChart = null;
-    let tabActual = 'resumen';
-    let paginaActual = 1;
-    let totalPaginas = 1;
+  let chartEvolucionInstance = null;
+  let pestanaActual = 'resumen';
+  let datosEvolucionGeneral = [];
+  let usuarioActual = null;
+  let vendedoresMetasCache = [];
+  let vendedorSeleccionadoActual = null;
 
-    // --- AUTENTICACIÓN Y ROLES ---
-    async function ejecutarLogin(e) {
-      e.preventDefault();
-      const email = document.getElementById('loginEmail').value;
-      const password = document.getElementById('loginPass').value;
+  // LISTA DE NOMINA DE VENDEDORES/CUENTAS EXCLUIDAS
+  const EXCLUIDOS = ["comercial y rebate", "cuenta inactiva", "daniel reyes", "fernando negrete"];
 
-      try {
-        const res = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.error || 'Credenciales incorrectas');
-
-        usuarioSesion = data.usuario;
-        localStorage.setItem('novovet_user', JSON.stringify(usuarioSesion));
-        
-        iniciarInterfaz();
-      } catch (err) {
-        alert(err.message);
-      }
-    }
-
-    function comprobarSesion() {
-      const stored = localStorage.getItem('novovet_user');
-      if (stored) {
-        usuarioSesion = JSON.parse(stored);
-        iniciarInterfaz();
-      }
-    }
-
-    function cerrarSesion() {
-      localStorage.removeItem('novovet_user');
-      location.reload();
-    }
-
-    function iniciarInterfaz() {
-      document.getElementById('loginModal').style.display = 'none';
-
-      const inputVendedor = document.getElementById('filtroVendedor');
-      const btnNuevaMeta = document.getElementById('btnNuevaMeta');
-      const btnAccesos = document.getElementById('btnGestionAccesos');
-      const lblRol = document.getElementById('lblUsuarioRol');
-
-      if (usuarioSesion.rol === 'admin') {
-        lblRol.innerText = 'VENDEDOR: ADMINISTRADOR';
-        inputVendedor.disabled = false;
-        btnNuevaMeta.style.display = 'inline-block';
-        btnAccesos.style.display = 'inline-flex';
-      } else {
-        lblRol.innerText = `VENDEDOR: ${usuarioSesion.nombre.toUpperCase()}`;
-        inputVendedor.value = usuarioSesion.vendedor_vinculado || usuarioSesion.nombre;
-        inputVendedor.disabled = true;
-        btnNuevaMeta.style.display = 'none';
-        btnAccesos.style.display = 'none';
-      }
-
-      inicializarFechasFiltro();
-      cargarResumen();
-    }
-
-    // --- GESTIÓN DE ACCESOS Y VENDEDORES ---
-    async function obtenerListaVendedores() {
-      try {
-        const res = await fetch('/api/vendedores/lista');
-        return await res.json();
-      } catch (error) {
-        console.error('Error al obtener lista de vendedores:', error);
-        return [];
-      }
-    }
-
-    async function cargarSelectVendedores() {
-      const select = document.getElementById('accVinculado');
-      if (!select) return;
-
-      const vendedores = await obtenerListaVendedores();
-      select.innerHTML = '<option value="">-- Sin Vincular --</option>';
-
-      vendedores.forEach(vendedor => {
-        const option = document.createElement('option');
-        option.value = vendedor;
-        option.textContent = vendedor;
-        select.appendChild(option);
-      });
-    }
-
-    async function abrirModalAccesos() {
-      document.getElementById('modalAccesos').style.display = 'flex';
-      await cargarSelectVendedores();
-      cargarListaUsuarios();
-    }
-
-    function cerrarModal(id) {
-      document.getElementById(id).style.display = 'none';
-    }
-
-    async function cargarListaUsuarios() {
-      const cont = document.getElementById('listaUsuariosRegistrados');
-      cont.innerHTML = '<div style="font-size:12px; color:#64748b;">Cargando usuarios...</div>';
-      try {
-        const res = await fetch('/api/usuarios');
-        const usuarios = await res.json();
-        cont.innerHTML = '';
-        usuarios.forEach(u => {
-          cont.innerHTML += `
-            <div class="user-list-item">
-              <div>
-                <b>${u.nombre}</b> <span style="color:#64748b;">(${u.email})</span>
-              </div>
-              <span class="badge-meta">${u.rol.toUpperCase()}</span>
-            </div>
-          `;
-        });
-      } catch (err) {
-        cont.innerHTML = '<div style="font-size:12px; color:red;">Error al cargar usuarios.</div>';
-      }
-    }
-
-    async function guardarUsuarioAcceso(e) {
-      e.preventDefault();
-      const payload = {
-        nombre: document.getElementById('accNombre').value,
-        email: document.getElementById('accEmail').value,
-        password: document.getElementById('accPass').value,
-        rol: document.getElementById('accRol').value,
-        vendedor_vinculado: document.getElementById('accVinculado').value
-      };
-
-      try {
-        const res = await fetch('/api/usuarios/guardar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
-        alert('Usuario guardado exitosamente');
-        cargarListaUsuarios();
-      } catch (err) {
-        alert('Error: ' + err.message);
-      }
-    }
-
-    // --- CARGA DE DATOS Y DASHBOARD ---
-    function inicializarFechasFiltro() {
-      const hoy = new Date();
-      const anio = hoy.getFullYear();
-      const mesNum = hoy.getMonth() + 1;
-      const mes = String(mesNum).padStart(2, '0');
-      const inicio = `${anio}-${mes}-01`;
-      const ultimoDia = new Date(anio, mesNum, 0).getDate();
-      const fin = `${anio}-${mes}-${String(ultimoDia).padStart(2, '0')}`;
-
-      document.getElementById('filtroDesde').value = inicio;
-      document.getElementById('filtroHasta').value = fin;
-
-      const selectMes = document.getElementById('selectMesMetas');
-      if (selectMes) selectMes.value = mesNum;
-
-      const selectAnio = document.getElementById('selectAnioMetas');
-      if (selectAnio) selectAnio.value = anio;
-    }
-
-    function cambiarTab(tab, element) {
-      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-      element.classList.add('active');
-
-      document.querySelectorAll('.view-section').forEach(v => v.classList.remove('active'));
-      const targetView = document.getElementById(`view-${tab}`);
-      if (targetView) targetView.classList.add('active');
-
-      tabActual = tab;
-      if (tab === 'detalle' && !document.getElementById('filtroDesde').value) {
-        inicializarFechasFiltro();
-      } else if (tab === 'metas') {
-        cargarMetas();
-      }
-    }
-
-    async function recargarActual() {
-      if (tabActual === 'resumen') await cargarResumen();
-      else if (tabActual === 'metas') await cargarMetas();
-      else if (tabActual === 'detalle') await consultarDetalle(paginaActual);
-    }
-
-async function cargarResumen() {
-  try {
-    const rolParam = usuarioSesion ? usuarioSesion.rol : '';
-    const meParam = usuarioSesion ? (usuarioSesion.vendedor_vinculado || usuarioSesion.nombre) : '';
-
-    const hoy = new Date();
-    const anio = hoy.getFullYear();
-    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-
-    // Consultamos las ventas del mes y las metas en paralelo
-    const [resVentas, resMetas] = await Promise.all([
-      fetch(`/api/ventas/mes-actual?anio=${anio}&mes=${mes}&rol=${rolParam}&vendedorLogueado=${encodeURIComponent(meParam)}`),
-      fetch(`/api/ventas/metas?anio=${anio}&mes=${Number(mes)}`)
-    ]);
-
-    if (!resVentas.ok) throw new Error(`HTTP error! status: ${resVentas.status}`);
-
-    const dataVentas = await resVentas.json();
-    const dataMetas = await resMetas.json();
-
-    if (dataVentas && dataVentas.resumen) {
-      renderizarResumen(dataVentas, Array.isArray(dataMetas) ? dataMetas : []);
-    }
-  } catch (err) {
-    console.error('Error en cargarResumen:', err);
+  function esExcluido(nombre) {
+    if (!nombre) return false;
+    const n = String(nombre).toLowerCase().trim();
+    return EXCLUIDOS.some(e => n.includes(e));
   }
-}
 
-function renderizarResumen(data, listaMetas) {
-  // 1. KPI Venta Total
-  document.getElementById('montoTotal').innerText = `$${Math.round(Number(data.resumen.totalVendido)).toLocaleString('es-CL')}`;
+  function escapeHTML(str) {
+    return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+  }
 
-  // 2. Ranking de Vendedores
-  const contRanking = document.getElementById('listaRanking');
-  contRanking.innerHTML = '';
-  if (data.resumen.vendedores) {
-    data.resumen.vendedores.forEach(item => {
-      contRanking.innerHTML += `
-        <div class="ranking-item">
-          <span style="text-transform:lowercase;">${item.vendedor}</span>
-          <b>$${Math.round(Number(item.monto)).toLocaleString('es-CL')}</b>
-        </div>
-      `;
+  function fmt(num) {
+    return '$' + Math.round(num || 0).toLocaleString('es-CL');
+  }
+
+  function esRolVendedor(usuario) {
+    if (!usuario || !usuario.rol) return false;
+    const r = String(usuario.rol).toUpperCase().trim();
+    return r === 'VENDOR' || r === 'VENDEDOR';
+  }
+
+  function obtenerNombreVendedor(usuario) {
+    if (!usuario) return '';
+    return usuario.vendedor_vinculado || usuario.nombre || '';
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    inicializarSelectsFecha();
+  });
+
+  function inicializarSelectsFecha() {
+    const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+    const mAct = 8;
+    const aAct = 2026;
+
+    const elM = document.getElementById('selectMesMetas');
+    if (elM) elM.innerHTML = nombresMeses.map((m, i) => `<option value="${i+1}" ${i+1 === mAct ? 'selected' : ''}>${m}</option>`).join('');
+
+    const elA = document.getElementById('selectAnioMetas');
+    if (elA) elA.innerHTML = [aAct - 1, aAct, aAct + 1].map(a => `<option value="${a}" ${a === aAct ? 'selected' : ''}>${a}</option>`).join('');
+  }
+
+  async function iniciarSesion() {
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email) return alert('Ingrese correo');
+
+    try {
+      const res = await fetch('/api/usuarios');
+      const usuarios = await res.json();
+      const user = usuarios.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+      if (user) {
+        usuarioActual = user;
+      } else {
+        usuarioActual = { nombre: email.split('@')[0], email, rol: 'ADMIN', vendedor_vinculado: null };
+      }
+
+      document.getElementById('screen-login').style.display = 'none';
+      document.getElementById('screen-app').style.display = 'block';
+
+      const esVendedor = esRolVendedor(usuarioActual);
+
+      document.getElementById('txtRol').innerText = `ROL: ${esVendedor ? 'VENDEDOR' : 'ADMINISTRADOR'}`;
+
+      if (esVendedor) {
+        document.getElementById('btnAccesos').style.display = 'none';
+        document.getElementById('btnAsignarMeta').style.display = 'none';
+        document.getElementById('containerFiltroVendedor').style.display = 'none';
+        document.getElementById('containerFiltroVendedorProv').style.display = 'none';
+        document.getElementById('btnRestablecerGrafico').style.display = 'none';
+        document.getElementById('lblRanking').innerText = 'MI RENDIMIENTO';
+      } else {
+        document.getElementById('btnAccesos').style.display = 'inline-block';
+        document.getElementById('btnAsignarMeta').style.display = 'inline-block';
+        document.getElementById('containerFiltroVendedor').style.display = 'flex';
+        document.getElementById('containerFiltroVendedorProv').style.display = 'flex';
+        document.getElementById('btnRestablecerGrafico').style.display = 'inline-block';
+        document.getElementById('lblRanking').innerText = 'RANKING VENDEDORES';
+      }
+
+      await poblarTodosLosSelectsVendedores();
+      recargarActual();
+    } catch (e) {
+      alert('Error de autenticación');
+    }
+  }
+
+  function cerrarSesion() {
+    usuarioActual = null;
+    vendedorSeleccionadoActual = null;
+    document.getElementById('screen-app').style.display = 'none';
+    document.getElementById('screen-login').style.display = 'flex';
+  }
+
+  function cambiarPestana(id, btn) {
+    pestanaActual = id;
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+
+    document.getElementById(`tab-${id}`).classList.add('active');
+    btn.classList.add('active');
+
+    recargarActual();
+  }
+
+  function recargarActual(forzar = false) {
+    if (pestanaActual === 'resumen') consultarResumen(forzar);
+    else if (pestanaActual === 'metas') consultarMetas();
+    else if (pestanaActual === 'detalle') consultarDetalle();
+    else if (pestanaActual === 'proveedores') consultarPorProveedor();
+  }
+
+  async function consultarResumen(forzar = false) {
+    const esVendedor = esRolVendedor(usuarioActual);
+    const vend = esVendedor ? obtenerNombreVendedor(usuarioActual) : '';
+
+    try {
+      const res = await fetch(`/api/ventas/consulta-mes?anio=2026&mes=8&vendedorLogueado=${encodeURIComponent(vend)}&forzar=${forzar}`);
+      const data = await res.json();
+
+      const total = data.resumen?.totalVendido || 0;
+      document.getElementById('kpiTotalVendido').innerText = fmt(total);
+
+      datosEvolucionGeneral = data.resumen?.evolucionDiaria || [];
+      
+      const tituloGraf = esVendedor ? `Ventas de ${vend || 'Mis Ventas'}` : 'Ventas Generales';
+      actualizarGrafico(datosEvolucionGeneral, tituloGraf);
+
+      // FILTRAR VENDEDORES EXCLUIDOS
+      const vendedores = (data.resumen?.vendedores || []).filter(v => !esExcluido(v.vendedor));
+
+      let htmlRank = '';
+      vendedores.forEach(v => {
+        htmlRank += `<div style="display:flex; justify-content:space-between; font-size:12px; padding:6px 0; border-bottom:1px solid #f1f5f9;"><span>${escapeHTML(v.vendedor)}</span><b>${fmt(v.monto)}</b></div>`;
+      });
+      document.getElementById('listaRankingVendedores').innerHTML = htmlRank;
+
+      let htmlCards = '';
+      vendedores.forEach(v => {
+        const pct = v.pct || 0;
+        const badgeClass = pct >= 100 ? 'badge-success' : (pct >= 50 ? 'badge-warning' : 'badge-danger');
+        htmlCards += `
+          <div class="card-vendedor-compact" id="card_vend_${escapeHTML(v.vendedor)}" onclick="filtrarGraficoPorVendedor('${escapeHTML(v.vendedor)}', this)">
+            <div class="v-header" title="${escapeHTML(v.vendedor)}">${escapeHTML(v.vendedor)}</div>
+            <div class="v-monto">${fmt(v.monto)}</div>
+            <div class="v-footer">
+              <span class="v-meta">Meta: ${fmt(v.meta)}</span>
+              <span class="badge-pct ${badgeClass}">${pct}%</span>
+            </div>
+          </div>
+        `;
+      });
+      document.getElementById('gridTarjetasVendedores').innerHTML = htmlCards;
+
+    } catch (err) { console.error(err); }
+  }
+
+  function actualizarGrafico(evolucionData, titulo) {
+    document.getElementById('tituloGrafico').innerText = `Evolución Diaria - ${titulo}`;
+    const ctx = document.getElementById('chartEvolucion')?.getContext('2d');
+    if (!ctx) return;
+
+    const labels = evolucionData.map(d => `Día ${d.dia}`);
+    const valores = evolucionData.map(d => d.monto);
+
+    if (chartEvolucionInstance) chartEvolucionInstance.destroy();
+
+    chartEvolucionInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: titulo,
+          data: valores,
+          borderColor: '#059669',
+          backgroundColor: 'rgba(5, 150, 105, 0.08)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } }
+      }
     });
   }
 
-  // 3. Renderizado de Tarjetas de Avance de Vendedores (KPI Cards)
-  const contTarjetas = document.getElementById('gridTarjetasVendedores');
-  if (contTarjetas) {
-    contTarjetas.innerHTML = '';
-
-    if (listaMetas.length === 0) {
-      contTarjetas.innerHTML = '<div style="font-size:12px; color:#64748b; grid-column: 1/-1;">No hay metas registradas para este mes.</div>';
-    } else {
-      listaMetas.forEach(m => {
-        const pct = Number(m.porcentajeMes) || 0;
-        
-        // Asignación dinámica de color según % de cumplimiento
-        let colorStatus = '#dc2626'; // Rojo (< 50%)
-        let bgStatus = '#fef2f2';
-        if (pct >= 100) {
-          colorStatus = '#059669'; // Verde (>= 100%)
-          bgStatus = '#ecfdf5';
-        } else if (pct >= 50) {
-          colorStatus = '#d97706'; // Naranja (50% - 99%)
-          bgStatus = '#fffbe0';
-        }
-
-        const anchoBarra = Math.min(pct, 100); // Límite visual al 100%
-
-        contTarjetas.innerHTML += `
-          <div class="seller-kpi-card">
-            <div class="seller-kpi-header">
-              <span class="seller-kpi-name">${m.vendedor.toLowerCase()}</span>
-              <span class="seller-kpi-badge" style="background:${bgStatus}; color:${colorStatus};">
-                ${pct}%
-              </span>
-            </div>
-            
-            <div class="seller-kpi-amounts">
-              <div>Vendido: <b>$${Math.round(m.vendidoMes).toLocaleString('es-CL')}</b></div>
-              <div>Meta: $${Math.round(m.metaMensual).toLocaleString('es-CL')}</div>
-            </div>
-
-            <div class="progress-bar-bg">
-              <div class="progress-bar-fill" style="width: ${anchoBarra}%; background-color: ${colorStatus};"></div>
-            </div>
-          </div>
-        `;
-      });
+  async function filtrarGraficoPorVendedor(nombreVendedor, cardEl) {
+    if (vendedorSeleccionadoActual === nombreVendedor) {
+      restablecerGraficoGeneral();
+      return;
     }
+
+    document.querySelectorAll('.card-vendedor-compact').forEach(c => c.classList.remove('selected'));
+    if (cardEl) cardEl.classList.add('selected');
+    vendedorSeleccionadoActual = nombreVendedor;
+
+    try {
+      const res = await fetch(`/api/ventas/consulta-mes?anio=2026&mes=8&vendedorLogueado=${encodeURIComponent(nombreVendedor)}`);
+      const data = await res.json();
+      actualizarGrafico(data.resumen?.evolucionDiaria || [], `Ventas de ${nombreVendedor}`);
+    } catch (e) { console.error(e); }
   }
 
-  // 4. Gráfico Diario
-  const ctx = document.getElementById('dailyChart').getContext('2d');
-  if (myChart) myChart.destroy();
+  function restablecerGraficoGeneral() {
+    vendedorSeleccionadoActual = null;
+    document.querySelectorAll('.card-vendedor-compact').forEach(c => c.classList.remove('selected'));
+    
+    const esVendedor = esRolVendedor(usuarioActual);
+    const vend = esVendedor ? obtenerNombreVendedor(usuarioActual) : '';
+    const tituloGraf = esVendedor ? `Ventas de ${vend || 'Mis Ventas'}` : 'Ventas Generales';
+    actualizarGrafico(datosEvolucionGeneral, tituloGraf);
+  }
 
-  myChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: data.resumen.evolucionDiaria.map(i => i.dia),
-      datasets: [{
-        label: 'Ventas',
-        data: data.resumen.evolucionDiaria.map(i => i.monto),
-        borderColor: '#059669',
-        backgroundColor: 'rgba(5, 150, 105, 0.05)',
-        borderWidth: 2.5,
-        tension: 0.3,
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true } }
-    }
-  });
-}
+  async function consultarMetas() {
+    const mes = document.getElementById('selectMesMetas').value;
+    const anio = document.getElementById('selectAnioMetas').value;
 
-    async function cargarMetas() {
-      const mes = document.getElementById('selectMesMetas').value;
-      const anio = document.getElementById('selectAnioMetas').value;
-      const body = document.getElementById('bodyMetas');
-      const head = document.getElementById('headMetas');
+    try {
+      const res = await fetch(`/api/ventas/metas?anio=${anio}&mes=${mes}`);
+      const data = await res.json();
       
-      body.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">Cargando información...</td></tr>';
+      // FILTRAR METAS DE VENDEDORES EXCLUIDOS
+      vendedoresMetasCache = (data.vendedores || []).filter(v => !esExcluido(v.vendedor));
 
-      try {
-        const res = await fetch(`/api/ventas/metas?anio=${anio}&mes=${mes}`);
-        let data = await res.json();
+      let trHeader = '<th>Vendedor</th><th class="num">Meta Mensual</th>';
+      (data.tramos || []).forEach(t => {
+        trHeader += `<th class="center">${t.label}<span class="subtext">${t.diasHabiles} días hábiles</span></th>`;
+      });
+      trHeader += '<th class="num">Venta Total</th><th class="center">% Avance Mes</th>';
+      document.getElementById('trHeaderMetas').innerHTML = trHeader;
 
-        if (!Array.isArray(data) || data.length === 0) {
-          body.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:20px;">No hay metas registradas.</td></tr>';
+      let bodyHtml = '';
+      const esVendedor = esRolVendedor(usuarioActual);
+      const vendVinculado = obtenerNombreVendedor(usuarioActual);
+
+      vendedoresMetasCache.forEach(v => {
+        if (esVendedor && vendVinculado && !v.vendedor.toLowerCase().includes(vendVinculado.toLowerCase())) {
           return;
         }
 
-        if (usuarioSesion && usuarioSesion.rol === 'vendedor') {
-          const miNombre = (usuarioSesion.vendedor_vinculado || usuarioSesion.nombre).toLowerCase();
-          data = data.filter(d => (d.vendedor || '').toLowerCase().includes(miNombre));
-        }
+        bodyHtml += `<tr>
+          <td><b>${escapeHTML(v.vendedor)}</b></td>
+          <td class="num"><b>${fmt(v.metaMensual)}</b></td>`;
 
-        const primerItem = data[0];
-        let thSemanas = '';
-        primerItem.semanas.forEach(s => {
-          thSemanas += `
-            <th style="text-align:center;">
-              ${s.label}
-              <span class="sub-dias-habiles">${s.diasHabiles} días hábiles</span>
-            </th>`;
+        v.semanas.forEach(s => {
+          let badgeClass = s.pct >= 100 ? 'badge-success' : (s.pct >= 50 ? 'badge-warning' : 'badge-danger');
+          bodyHtml += `<td class="center">
+            <div><b>${fmt(s.vendido)}</b></div>
+            <span class="subtext">Meta: ${fmt(s.metaTramo)}</span>
+            <span class="badge-pct ${badgeClass}" style="margin-top:2px;">${s.pct}%</span>
+          </td>`;
         });
 
-        head.innerHTML = `
-          <tr>
-            <th>Vendedor</th>
-            <th style="text-align:right;">Meta Mensual</th>
-            ${thSemanas}
-            <th style="text-align:right;">Venta Total</th>
-            <th style="text-align:center;">% Avance Mes</th>
-          </tr>
-        `;
+        let pctTotalClass = v.porcentajeMes >= 100 ? 'badge-success' : (v.porcentajeMes >= 50 ? 'badge-warning' : 'badge-danger');
 
-        body.innerHTML = '';
-        data.forEach(item => {
-          const pctMes = Number(item.porcentajeMes) || 0;
-          const colorPctMes = pctMes >= 100 ? '#059669' : (pctMes >= 50 ? '#d97706' : '#dc2626');
+        bodyHtml += `
+          <td class="num"><b>${fmt(v.vendidoMes)}</b></td>
+          <td class="center"><span class="badge-pct ${pctTotalClass}">${v.porcentajeMes}%</span></td>
+        </tr>`;
+      });
+      document.getElementById('bodyMetas').innerHTML = bodyHtml;
 
-          const celdasSemanas = item.semanas.map(sem => {
-            const colorPct = sem.pct >= 100 ? '#059669' : '#dc2626';
-            const bgPct = sem.pct >= 100 ? '#ecfdf5' : '#fef2f2';
-            return `
-              <td style="text-align:center; vertical-align:middle;">
-                <div style="font-weight:700; font-size:13px; color:#1e293b;">$${sem.vendido.toLocaleString('es-CL')}</div>
-                <div style="font-size:10px; color:#64748b;">Meta: $${sem.metaTramo.toLocaleString('es-CL')}</div>
-                <div style="margin-top:3px;"><span style="background:${bgPct}; color:${colorPct}; font-size:10px; font-weight:800; padding:2px 6px; border-radius:4px;">${sem.pct}%</span></div>
-              </td>
-            `;
-          }).join('');
+    } catch (e) { console.error(e); }
+  }
 
-          body.innerHTML += `
-            <tr>
-              <td><b>${item.vendedor}</b></td>
-              <td style="text-align:right; font-weight:600;">$${item.metaMensual.toLocaleString('es-CL')}</td>
-              ${celdasSemanas}
-              <td style="text-align:right; font-weight:700;">$${item.vendidoMes.toLocaleString('es-CL')}</td>
-              <td style="text-align:center;">
-                <span style="background:${colorPctMes}15; color:${colorPctMes}; font-weight:800; padding:4px 8px; border-radius:6px;">${pctMes}%</span>
-              </td>
-            </tr>
-          `;
-        });
+  function abrirModalMeta() {
+    const cont = document.getElementById('listaEdicionMetas');
+    let html = '';
+    vendedoresMetasCache.forEach((v, idx) => {
+      html += `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-size:12px; font-weight:600;">${escapeHTML(v.vendedor)}</span>
+          <input type="number" id="inputMeta_${idx}" value="${v.metaMensual}" style="width:140px;">
+        </div>
+      `;
+    });
+    cont.innerHTML = html;
+    document.getElementById('modalMetas').style.display = 'flex';
+  }
 
-      } catch (err) {
-        body.innerHTML = `<tr><td colspan="8" style="text-align:center; color:red; padding:20px;">Error: ${err.message}</td></tr>`;
-      }
+  function cerrarModalMeta() { document.getElementById('modalMetas').style.display = 'none'; }
+
+  async function guardarMetas() {
+    const mes = document.getElementById('selectMesMetas').value;
+    const anio = document.getElementById('selectAnioMetas').value;
+
+    const payload = vendedoresMetasCache.map((v, idx) => ({
+      nombre: v.vendedor,
+      meta: Number(document.getElementById(`inputMeta_${idx}`).value) || 0
+    }));
+
+    await fetch('/api/ventas/metas/guardar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ anio, mes, metas: payload })
+    });
+
+    cerrarModalMeta();
+    consultarMetas();
+  }
+
+  async function consultarDetalle() {
+    let vend = document.getElementById('filtroVendedor')?.value || '';
+    if (esRolVendedor(usuarioActual)) {
+      vend = obtenerNombreVendedor(usuarioActual);
     }
+    const busq = document.getElementById('filtroBuscar')?.value || '';
+    const estadoCompra = document.getElementById('filtroEstadoCompra')?.value || 'TODOS';
 
-    // --- MODAL Y GUARDADO MASIVO DE METAS ---
-    async function modalCargarMeta() {
-      const mes = document.getElementById('selectMesMetas').value;
-      const anio = document.getElementById('selectAnioMetas').value;
-      const cont = document.getElementById('contenedorListaMetas');
+    try {
+      const res = await fetch(`/api/ventas/detalle?vendedor=${encodeURIComponent(vend)}&busqueda=${encodeURIComponent(busq)}&anio=2026&mes=8`);
+      const data = await res.json();
 
-      cont.innerHTML = '<div style="text-align:center; padding:20px; color:#64748b;">Cargando lista de vendedores...</div>';
-      document.getElementById('modalMeta').style.display = 'flex';
+      document.getElementById('thMes2').innerText = data.mesesNombres[0];
+      document.getElementById('thMes1').innerText = data.mesesNombres[1];
+      document.getElementById('thMesAct').innerText = data.mesesNombres[2];
 
-      try {
-        const [resVend, resMetas] = await Promise.all([
-          fetch('/api/vendedores/lista'),
-          fetch(`/api/ventas/metas?anio=${anio}&mes=${mes}`)
-        ]);
+      let registros = data.detalle || [];
 
-        const vendedores = await resVend.json();
-        const dataMetas = await resMetas.json();
-
-        const metasExistentes = {};
-        if (Array.isArray(dataMetas)) {
-          dataMetas.forEach(item => {
-            metasExistentes[item.vendedor.toLowerCase().trim()] = item.metaMensual;
-          });
-        }
-
-        cont.innerHTML = '';
-        vendedores.forEach(vendedor => {
-          const metaActual = metasExistentes[vendedor.toLowerCase().trim()] || '';
-
-          cont.innerHTML += `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9;">
-              <label style="font-weight:600; font-size:14px; color:#334155; text-transform:capitalize; width:50%;">
-                ${vendedor.toLowerCase()}
-              </label>
-              <div style="width:50%;">
-                <input 
-                  type="number" 
-                  class="input-meta-vendedor" 
-                  data-vendedor="${vendedor}" 
-                  placeholder="Ej: 15000000" 
-                  value="${metaActual}"
-                  style="width:100%; padding:8px 12px; border:1px solid #cbd5e1; border-radius:6px; font-size:14px; font-weight:600; color:#0f172a;"
-                />
-              </div>
-            </div>
-          `;
-        });
-
-      } catch (err) {
-        cont.innerHTML = `<div style="color:red; text-align:center;">Error al cargar datos: ${err.message}</div>`;
+      if (estadoCompra === 'SIN_COMPRA_AGOSTO') {
+        registros = registros.filter(d => (Number(d.mes_actual) || 0) <= 0);
       }
+
+      let html = '';
+      registros.forEach(d => {
+        html += `<tr>
+          <td>${escapeHTML(d.cliente)}</td>
+          <td class="num">${fmt(d.mes_2)}</td>
+          <td class="num">${fmt(d.mes_1)}</td>
+          <td class="num"><b>${fmt(d.mes_actual)}</b></td>
+        </tr>`;
+      });
+      document.getElementById('bodyDetalle').innerHTML = html || '<tr><td colspan="4">Sin registros</td></tr>';
+    } catch (e) { console.error(e); }
+  }
+
+  async function consultarPorProveedor() {
+    let vend = document.getElementById('filtroVendedorProv')?.value || '';
+    if (esRolVendedor(usuarioActual)) {
+      vend = obtenerNombreVendedor(usuarioActual);
     }
+    const busq = document.getElementById('filtroBuscarProv')?.value || '';
 
-    async function guardarMetasMasivas(e) {
-      e.preventDefault();
-      const mes = document.getElementById('selectMesMetas').value;
-      const anio = document.getElementById('selectAnioMetas').value;
+    try {
+      const res = await fetch(`/api/ventas/proveedores?vendedor=${encodeURIComponent(vend)}&busqueda=${encodeURIComponent(busq)}&anio=2026&mes=8`);
+      const data = await res.json();
 
-      const inputs = document.querySelectorAll('.input-meta-vendedor');
-      const payloadMetas = [];
+      document.getElementById('thMesProv2').innerText = data.mesesNombres[0];
+      document.getElementById('thMesProv1').innerText = data.mesesNombres[1];
+      document.getElementById('thMesProvAct').innerText = data.mesesNombres[2];
 
-      inputs.forEach(input => {
-        const vendedor = input.getAttribute('data-vendedor');
-        const meta = input.value;
-        if (vendedor) {
-          payloadMetas.push({ vendedor, meta });
+      let html = '';
+      (data.proveedores || []).forEach(p => {
+        html += `<tr>
+          <td>${escapeHTML(p.proveedor)}</td>
+          <td class="num">${fmt(p.mes_2)}</td>
+          <td class="num">${fmt(p.mes_1)}</td>
+          <td class="num"><b>${fmt(p.mes_actual)}</b></td>
+        </tr>`;
+      });
+      document.getElementById('bodyProveedor').innerHTML = html || '<tr><td colspan="4">Sin registros</td></tr>';
+    } catch (e) { console.error(e); }
+  }
+
+  async function poblarTodosLosSelectsVendedores() {
+    try {
+      const res = await fetch('/api/vendedores/lista-completa');
+      const vendedoresRaw = await res.json();
+      
+      // FILTRAR VENDEDORES EN SELECTS
+      const vendedores = vendedoresRaw.filter(v => !esExcluido(v));
+
+      ['filtroVendedor', 'filtroVendedorProv', 'accVinculo'].forEach(id => {
+        const select = document.getElementById(id);
+        if (select) {
+          let opts = id === 'accVinculo' ? '<option value="">-- Sin Vincular --</option>' : '<option value="">Todos los Vendedores</option>';
+          vendedores.forEach(v => opts += `<option value="${escapeHTML(v)}">${escapeHTML(v)}</option>`);
+          select.innerHTML = opts;
         }
       });
+    } catch (e) { console.error(e); }
+  }
 
-      try {
-        const res = await fetch('/api/ventas/metas/guardar-masivo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ anio, mes, metas: payloadMetas })
-        });
+  async function abrirModalAccesos() {
+    document.getElementById('modalAccesos').style.display = 'flex';
+    cargarListaUsuarios();
+  }
 
-        const data = await res.json();
+  function cerrarModalAccesos() { document.getElementById('modalAccesos').style.display = 'none'; }
 
-        if (res.ok) {
-          alert("¡Todas las metas fueron actualizadas con éxito!");
-          cerrarModal('modalMeta');
-          cargarMetas();
-        } else {
-          alert("Error: " + data.error);
-        }
-      } catch (err) {
-        alert("Error de conexión: " + err.message);
+  async function cargarListaUsuarios() {
+    const cont = document.getElementById('listaUsuariosRegistrados');
+    try {
+      const res = await fetch('/api/usuarios');
+      const usuarios = await res.json();
+      let html = '';
+      usuarios.forEach(u => {
+        html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f1f5f9; font-size:11px;">
+          <div><b>${escapeHTML(u.nombre)}</b> <span style="color:#64748b;">(${escapeHTML(u.email)})</span></div>
+          <span class="badge-pct ${u.rol === 'ADMIN' ? 'badge-success' : 'badge-warning'}">${u.rol}</span>
+        </div>`;
+      });
+      cont.innerHTML = html || 'No hay usuarios registrados';
+    } catch (e) { cont.innerHTML = 'Error al cargar usuarios'; }
+  }
+
+  async function guardarUsuario() {
+    const nombre = document.getElementById('accNombre').value.trim();
+    const email = document.getElementById('accEmail').value.trim();
+    const password = document.getElementById('accPass').value.trim();
+    const rol = document.getElementById('accRol').value;
+    const vendedor_vinculado = document.getElementById('accVinculo').value;
+
+    if (!nombre || !email || !password) {
+      alert('⚠️ Por favor completa todos los campos requeridos (Nombre, Email y Contraseña).');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/usuarios/guardar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre, email, password, rol, vendedor_vinculado })
+      });
+      
+      const data = await res.json();
+      if (data.ok) {
+        alert('✅ Usuario guardado exitosamente');
+        document.getElementById('accNombre').value = '';
+        document.getElementById('accEmail').value = '';
+        document.getElementById('accPass').value = '';
+        document.getElementById('accVinculo').value = '';
+        cargarListaUsuarios();
+      } else {
+        alert('❌ Error al guardar usuario: ' + (data.error || 'Error en el servidor'));
       }
+    } catch (err) {
+      alert('❌ Error de conexión: ' + err.message);
     }
-
-    async function consultarDetalle(pag = 1) {
-      paginaActual = pag;
-      const desde = document.getElementById('filtroDesde').value;
-      const hasta = document.getElementById('filtroHasta').value;
-      const vendedor = document.getElementById('filtroVendedor').value;
-      const busqueda = document.getElementById('filtroBuscar').value;
-
-      const body = document.getElementById('bodyDetalle');
-      body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Cargando lista de ventas...</td></tr>';
-
-      try {
-        const rolParam = usuarioSesion ? usuarioSesion.rol : '';
-        const meParam = usuarioSesion ? (usuarioSesion.vendedor_vinculado || usuarioSesion.nombre) : '';
-        
-        const url = `/api/ventas/detalle?desde=${desde}&hasta=${hasta}&vendedor=${encodeURIComponent(vendedor)}&busqueda=${encodeURIComponent(busqueda)}&pagina=${paginaActual}&limite=100&rol=${rolParam}&vendedorLogueado=${encodeURIComponent(meParam)}`;
-        
-        const res = await fetch(url);
-        const data = await res.json();
-
-        body.innerHTML = '';
-        if (!data.detalle || data.detalle.length === 0) {
-          body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">No se encontraron registros.</td></tr>';
-        } else {
-          data.detalle.forEach(row => {
-            body.innerHTML += `
-              <tr>
-                <td>${row.fecha}</td>
-                <td style="text-transform:lowercase;">${row.vendedor}</td>
-                <td><b>${row.cliente}</b></td>
-                <td style="text-align:center;"><span class="doc-pill">${row.doc}</span></td>
-                <td style="text-align:right; font-weight:700;">$${row.monto.toLocaleString('es-CL')}</td>
-              </tr>
-            `;
-          });
-          totalPaginas = data.totalPaginas || 1;
-          document.getElementById('totalFiltradoDetalle').innerText = `${data.totalRegistros.toLocaleString('es-CL')} registros encontrados`;
-          actualizarControlesPaginacion(data.totalRegistros, data.paginaActual, totalPaginas);
-        }
-
-      } catch (err) {
-        body.innerHTML = '<tr><td colspan="5" style="text-align:center; color:red; padding:20px;">Error al consultar detalle.</td></tr>';
-      }
-    }
-
-    function cambiarPagina(delta) {
-      const nuevaPag = paginaActual + delta;
-      if (nuevaPag >= 1 && nuevaPag <= totalPaginas) consultarDetalle(nuevaPag);
-    }
-
-    function actualizarControlesPaginacion(total, pag, max) {
-      document.getElementById('paginationInfo').innerText = `Página ${pag} de ${max}`;
-      document.getElementById('btnPrev').disabled = (pag <= 1);
-      document.getElementById('btnNext').disabled = (pag >= max);
-    }
-
-    comprobarSesion();
-</script></body>
+  }
+</script>
+</body>
 </html>
