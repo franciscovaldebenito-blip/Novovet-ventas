@@ -1,6 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const { createClient } = require('@supabase/supabase-js');
+const cron = require('node-cron');
+const { google } = require('googleapis');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
@@ -16,10 +19,189 @@ let cacheUsuariosMap = {};
 let cacheUltimaActualizacion = 0;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
 
+const EXCLUIDOS = ["comercial y rebate", "cuenta inactiva", "daniel reyes", "fernando negrete"];
+
 const FERIADOS_CHILE = [
   [1, 1], [4, 3], [4, 4], [5, 1], [5, 21], [6, 20], [6, 29],
   [7, 16], [8, 15], [9, 18], [9, 19], [10, 12], [10, 31], [11, 1], [12, 8], [12, 25]
 ];
+
+// FUNCIÓN AUXILIAR PARA TRANSFORMAR MONTOS (FORMATO CHILENO A FLOAT)
+function parseMonto(valor) {
+  if (valor === undefined || valor === null || valor === '') return 0;
+  if (typeof valor === 'number') return valor;
+  const textoLimpio = valor.toString().replace(/\./g, '').replace(',', '.').trim();
+  const numero = parseFloat(textoLimpio);
+  return isNaN(numero) ? 0 : numero;
+}
+
+// FUNCIÓN AUXILIAR PARA FECHAS YYYY-MM-DD
+function formatearFecha(fechaTexto) {
+  if (!fechaTexto) return null;
+  const texto = fechaTexto.toString().trim();
+  if (texto.includes('/')) {
+    const partes = texto.split('/');
+    if (partes.length === 3) {
+      return `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+    }
+  }
+  if (texto.includes('-')) return texto;
+  return null;
+}
+
+async function ejecutarSincronizacionDrive() {
+  console.log(`[${new Date().toLocaleString()}] 🔄 Iniciando sincronización desde Google Drive...`);
+  try {
+    const { data: ultimoRegistro, error: errBD } = await supabase
+      .from('Ventas_detalle')
+      .select('fecha')
+      .order('fecha', { ascending: false })
+      .limit(1);
+
+    if (errBD) throw errBD;
+
+    const fechaLimiteBD = (ultimoRegistro && ultimoRegistro.length > 0 && ultimoRegistro[0].fecha)
+      ? new Date(ultimoRegistro[0].fecha)
+      : new Date('2000-01-01');
+
+    // SOPORTE DE CREDENCIALES (RENDER O LOCAL)
+    let auth;
+    if (process.env.GOOGLE_CREDENTIALS) {
+      const keys = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+      auth = google.auth.fromJSON(keys);
+      auth.scopes = ['https://www.googleapis.com/auth/spreadsheets.readonly'];
+    } else {
+      auth = new google.auth.GoogleAuth({
+        keyFile: path.join(__dirname, 'credentials.json'),
+        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+      });
+    }
+
+    const sheets = google.sheets({ version: 'v4', auth });
+    const spreadsheetId = '1f1TFuHzonDow_W-SZd3qpqJiTW1NKS8TzZ_NxSPhgJo';
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range: 'Detalle!A1:AE',
+    });
+
+    const filas = response.data.values || [];
+    if (filas.length < 2) {
+      console.log('ℹ️ No hay datos para procesar.');
+      return { ok: true, insertados: 0, mensaje: 'Sin filas' };
+    }
+
+    const encabezados = filas[0].map(h => h.toString().toLowerCase().trim());
+
+    const getVal = (fila, nombreColumna) => {
+      const idx = encabezados.findIndex(h => h.includes(nombreColumna.toLowerCase()));
+      if (idx !== -1 && fila[idx] !== undefined && fila[idx] !== null) {
+        return fila[idx].toString().trim();
+      }
+      return null;
+    };
+
+    const registrosNuevos = [];
+
+    for (let i = 1; i < filas.length; i++) {
+      const fila = filas[i];
+
+      const fechaTexto = getVal(fila, 'fecha');
+      if (!fechaTexto) continue;
+
+      const fechaISO = formatearFecha(fechaTexto);
+      if (!fechaISO) continue;
+
+      const fechaFila = new Date(fechaISO);
+
+      const nombreVendedor = (fila[3] !== undefined && fila[3] !== null) ? fila[3].toString().trim() : '';
+      const rutCliente = (fila[4] !== undefined && fila[4] !== null) ? fila[4].toString().trim() : '';
+      const nombreCliente = (fila[5] !== undefined && fila[5] !== null) ? fila[5].toString().trim() : '';
+      const direccionVal = (fila[9] !== undefined && fila[9] !== null) ? fila[9].toString().trim() : (getVal(fila, 'dirección') || getVal(fila, 'direccion'));
+
+      const esExcluido = EXCLUIDOS.some(e => nombreVendedor.toLowerCase().includes(e));
+
+      if (fechaFila > fechaLimiteBD && !esExcluido) {
+        const cantidad = parseMonto(getVal(fila, 'cantidad'));
+        const precio = parseMonto(getVal(fila, 'precio'));
+        let total = parseMonto(getVal(fila, 'total'));
+
+        if (total === 0 && cantidad > 0 && precio > 0) {
+          total = cantidad * precio;
+        }
+
+        registrosNuevos.push({
+          movimiento: getVal(fila, 'movimiento'),
+          sector: getVal(fila, 'sector'),
+          vendedor: getVal(fila, 'vendedor'),
+          nombre_vendedor: nombreVendedor,
+          rut: rutCliente,
+          nombre_cliente: nombreCliente,
+          comuna: getVal(fila, 'comuna'),
+          canal: getVal(fila, 'canal'),
+          cod_direccion: getVal(fila, 'cod dirección') || getVal(fila, 'cod direccion'),
+          direccion: direccionVal,
+          fecha: fechaISO,
+          vencimiento: formatearFecha(getVal(fila, 'vencimiento')),
+          condicion_pago: getVal(fila, 'condición pago') || getVal(fila, 'condicion pago'),
+          numero_pedido: getVal(fila, 'pedido'),
+          orden_compra: getVal(fila, 'orden compra'),
+          comentarios: getVal(fila, 'comentarios'),
+          usuario_creador: getVal(fila, 'creador'),
+          precio_lista: parseMonto(getVal(fila, 'precio lista')),
+          lista_cliente: getVal(fila, 'lista cliente'),
+          documento: getVal(fila, 'documento'),
+          documento_asoc: getVal(fila, 'doc asoc'),
+          comentario_doc: getVal(fila, 'comentario doc'),
+          articulo: getVal(fila, 'artículo') || getVal(fila, 'articulo'),
+          descripcion: getVal(fila, 'descripción') || getVal(fila, 'descripcion'),
+          observacion: getVal(fila, 'observación') || getVal(fila, 'observacion'),
+          proveedor: getVal(fila, 'proveedor'),
+          costo: parseMonto(getVal(fila, 'costo')),
+          grupo: getVal(fila, 'grupo'),
+          cantidad: cantidad,
+          precio: precio,
+          total: total
+        });
+      }
+    }
+
+    if (registrosNuevos.length > 0) {
+      const { error: errInsert } = await supabase
+        .from('Ventas_detalle')
+        .insert(registrosNuevos);
+
+      if (errInsert) throw errInsert;
+
+      cacheUltimaActualizacion = 0;
+      console.log(`✅ Sincronización exitosa: ${registrosNuevos.length} registros insertados.`);
+      return { ok: true, insertados: registrosNuevos.length, mensaje: 'Sincronización exitosa' };
+    }
+
+    console.log('ℹ️ Base de datos al día. 0 registros nuevos.');
+    return { ok: true, insertados: 0, mensaje: 'La base de datos ya está al día' };
+
+  } catch (error) {
+    console.error('❌ Error en sincronización Drive:', error.message);
+    return { ok: false, error: error.message };
+  }
+}
+
+// CRON JOB: ÚNICA FORMA AUTOMÁTICA (Todos los días a las 10:00 AM hora de Chile)
+cron.schedule('0 10 * * *', () => {
+  ejecutarSincronizacionDrive();
+}, {
+  timezone: "America/Santiago"
+});
+
+// ENDPOINT MANUAL DE SINCRONIZACIÓN (Sigue disponible si deseas invocarlo mediante un botón)
+app.post('/api/ventas/sincronizar-drive', async (req, res) => {
+  const resultado = await ejecutarSincronizacionDrive();
+  if (!resultado.ok) {
+    return res.status(500).json(resultado);
+  }
+  res.json(resultado);
+});
 
 function getISOWeekNumber(date) {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
@@ -59,14 +241,12 @@ function calcularEstructuraMes(anio, mes) {
 
   let tramosCrudos = Object.values(semanasMapa).filter(t => t.diasHabiles > 0);
 
-  // 1. Regla de inicio: Si la primera semana tiene 1 o 2 días hábiles, se agrupa a la siguiente
   if (tramosCrudos.length > 1 && tramosCrudos[0].diasHabiles <= 2) {
     tramosCrudos[1].inicio = tramosCrudos[0].inicio;
     tramosCrudos[1].diasHabiles += tramosCrudos[0].diasHabiles;
     tramosCrudos.shift();
   }
 
-  // 2. Regla de fin: Si la última semana tiene 1 o 2 días hábiles, se agrupa a la anterior
   if (tramosCrudos.length > 1) {
     const ultIdx = tramosCrudos.length - 1;
     if (tramosCrudos[ultIdx].diasHabiles <= 2) {
@@ -200,7 +380,7 @@ async function obtenerDatosRpidos(forzarRecarga = false) {
     }
 
     cacheVentas = todos;
-    cacheUltimaActualizacion = ahora;
+    cacheUltimaActualizacion = Date.now();
     return { registros: cacheVentas, usuariosMap: cacheUsuariosMap };
   } catch (err) {
     if (cacheVentas) return { registros: cacheVentas, usuariosMap: cacheUsuariosMap };
@@ -243,9 +423,7 @@ app.get('/api/ventas/consulta-mes', async (req, res) => {
     });
 
     let ventasFiltradas = ventasMes;
-    const esVendedorEspecifico = vendedorFiltro !== '';
-
-    if (esVendedorEspecifico) {
+    if (vendedorFiltro !== '') {
       ventasFiltradas = ventasMes.filter(v => coincidenNombres(extraerVendedor(v, usuariosMap), vendedorFiltro));
     }
 
@@ -326,7 +504,6 @@ app.get('/api/ventas/detalle', async (req, res) => {
 
     let listaDetalle = Object.values(mapaClientes);
 
-    // Filtro para mostrar clientes sin compra en el mes seleccionado
     if (soloSinCompra === 'true') {
       listaDetalle = listaDetalle.filter(c => c.mes_actual === 0 && (c.mes_1 > 0 || c.mes_2 > 0));
     }
@@ -392,7 +569,6 @@ app.get('/api/ventas/metas', async (req, res) => {
     const estructuraMes = calcularEstructuraMes(anioNum, mesNum);
     const { registros: todasVentas, usuariosMap } = await obtenerDatosRpidos();
 
-    // Obtener la lista general completa de todos los vendedores
     const todosLosVendedoresSet = new Set();
     todasVentas.forEach(v => {
       const nom = extraerVendedor(v, usuariosMap);
@@ -423,7 +599,6 @@ app.get('/api/ventas/metas', async (req, res) => {
       if (dia) acumVendedores[nomKey].ventasPorDia[dia] = (acumVendedores[nomKey].ventasPorDia[dia] || 0) + monto;
     });
 
-    // Unir catálogo completo de vendedores con metas guardadas
     const todasKeysMap = new Map();
     Array.from(todosLosVendedoresSet).forEach(v => todasKeysMap.set(v.toLowerCase().trim(), v));
     Object.keys(metasMap).forEach(k => {
