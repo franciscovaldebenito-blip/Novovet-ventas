@@ -167,11 +167,24 @@ async function ejecutarSincronizacionDrive() {
     }
 
     if (registrosNuevos.length > 0) {
-      const { error: errInsert } = await supabase
-        .from('Ventas_detalle')
-        .insert(registrosNuevos);
+      // INSERCIÓN POR LOTES PARA NO SOBRECARGAR LA MEMORIA DE RENDER
+      const TAMANO_LOTE = 300;
+      let totalInsertados = 0;
 
-      if (errInsert) throw errInsert;
+      for (let i = 0; i < registrosNuevos.length; i += TAMANO_LOTE) {
+        const lote = registrosNuevos.slice(i, i + TAMANO_LOTE);
+        const { error: errInsert } = await supabase
+          .from('Ventas_detalle')
+          .insert(lote);
+
+        if (errInsert) {
+          console.error(`❌ Error al insertar lote desde índice ${i}:`, errInsert.message);
+          throw errInsert;
+        }
+
+        totalInsertados += lote.length;
+        console.log(`📦 Lote procesado: ${totalInsertados} / ${registrosNuevos.length} registros.`);
+      }
 
       cacheUltimaActualizacion = 0;
       console.log(`✅ Sincronización exitosa: ${registrosNuevos.length} registros insertados.`);
@@ -187,20 +200,17 @@ async function ejecutarSincronizacionDrive() {
   }
 }
 
-// CRON JOB: ÚNICA FORMA AUTOMÁTICA (Todos los días a las 10:00 AM hora de Chile)
+// CRON JOB: ÚNICA FORMA AUTOMÁTICA (Todos los días a las 12:30 PM hora de Chile)
 cron.schedule('30 12 * * *', () => {
   ejecutarSincronizacionDrive();
 }, {
   timezone: "America/Santiago"
 });
 
-// ENDPOINT MANUAL DE SINCRONIZACIÓN (Sigue disponible si deseas invocarlo mediante un botón)
-app.post('/api/ventas/sincronizar-drive', async (req, res) => {
-  const resultado = await ejecutarSincronizacionDrive();
-  if (!resultado.ok) {
-    return res.status(500).json(resultado);
-  }
-  res.json(resultado);
+// ENDPOINT MANUAL DE SINCRONIZACIÓN (RESPONDE DE INMEDIATO EN SEGUNDO PLANO)
+app.post('/api/ventas/sincronizar-drive', (req, res) => {
+  res.status(202).json({ ok: true, mensaje: 'Sincronización iniciada en segundo plano.' });
+  ejecutarSincronizacionDrive().catch(err => console.error("Error en segundo plano:", err));
 });
 
 function getISOWeekNumber(date) {
