@@ -80,7 +80,7 @@ async function ejecutarSincronizacionDrive() {
     const sheets = google.sheets({ version: 'v4', auth });
     const spreadsheetId = '1f1TFuHzonDow_W-SZd3qpqJiTW1NKS8TzZ_NxSPhgJo';
 
-    // 1. OBTENER SOLO EL ENCABEZADO (Fila 1) PARA AHORRAR MEMORIA
+    // 1. OBTENER ENCABEZADOS (Fila 1)
     const resEncabezado = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: 'Detalle!A1:AE1',
@@ -101,16 +101,20 @@ async function ejecutarSincronizacionDrive() {
       return null;
     };
 
-    // 2. OBTENER METADATOS DE LA HOJA PARA CONOCER EL NÚMERO TOTAL DE FILAS
-    const sheetInfo = await sheets.spreadsheets.get({ spreadsheetId });
+    // 2. OBTENER TOTAL REAL DE FILAS DE LA HOJA
+    const sheetInfo = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets.properties(title,gridProperties/rowCount)'
+    });
     const detalleSheet = sheetInfo.data.sheets.find(s => s.properties.title === 'Detalle');
-    const totalFilasHoja = detalleSheet ? detalleSheet.properties.gridProperties.rowCount : 50000;
+    const totalFilasHoja = detalleSheet ? detalleSheet.properties.gridProperties.rowCount : 140000;
 
-    // 3. LEER SOLO LAS ÚLTIMAS 1,500 FILAS DE GOOGLE SHEETS
-    const filaInicio = Math.max(2, totalFilasHoja - 1500);
+    // 3. LEER LAS ÚLTIMAS 10.000 FILAS PARA ASEGURAR COBERTURA DE DÍAS ANTERIORES
+    const CANTIDAD_FILAS_LEER = 10000;
+    const filaInicio = Math.max(2, totalFilasHoja - CANTIDAD_FILAS_LEER);
     const range = `Detalle!A${filaInicio}:AE${totalFilasHoja}`;
 
-    console.log(`📊 Leyendo rango optimizado: ${range}`);
+    console.log(`📊 Leyendo rango ampliado: ${range}`);
     const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
     const filas = response.data.values || [];
 
