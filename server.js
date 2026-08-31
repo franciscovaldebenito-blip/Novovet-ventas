@@ -188,7 +188,7 @@ async function ejecutarSincronizacionDrive() {
 }
 
 // CRON JOB: ÚNICA FORMA AUTOMÁTICA (Todos los días a las 10:00 AM hora de Chile)
-cron.schedule('0 10 * * *', () => {
+cron.schedule('30 12 * * *', () => {
   ejecutarSincronizacionDrive();
 }, {
   timezone: "America/Santiago"
