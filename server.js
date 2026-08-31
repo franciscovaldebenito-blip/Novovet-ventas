@@ -35,20 +35,46 @@ function parseMonto(valor) {
   return isNaN(numero) ? 0 : numero;
 }
 
-// FUNCIÓN AUXILIAR PARA FECHAS YYYY-MM-DD
-function formatearFecha(fechaTexto) {
-  if (!fechaTexto) return null;
-  const texto = fechaTexto.toString().trim();
-  if (texto.includes('/')) {
-    const partes = texto.split('/');
-    if (partes.length === 3) {
-      return `${partes[2]}-${partes[1].padStart(2, '0')}-${partes[0].padStart(2, '0')}`;
+function formatearFecha(fechaStr) {
+  if (!fechaStr) return null;
+  const str = fechaStr.toString().trim();
+  if (!str) return null;
+
+  // 1. Manejo de número de serie de Excel/Google Sheets
+  if (!isNaN(str) && !str.includes('-') && !str.includes('/')) {
+    const num = parseFloat(str);
+    const fechaObj = new Date(Math.round((num - 25569) * 86400 * 1000));
+    if (!isNaN(fechaObj.getTime())) {
+      return fechaObj.toISOString().split('T')[0];
     }
   }
-  if (texto.includes('-')) return texto;
+
+  // 2. Si viene como DD-MM-YYYY o DD/MM/YYYY
+  const partesLatinas = str.split(/[-/]/);
+  if (partesLatinas.length === 3) {
+    let p1 = partesLatinas[0].padStart(2, '0');
+    let p2 = partesLatinas[1].padStart(2, '0');
+    let p3 = partesLatinas[2];
+
+    // Caso YYYY-MM-DD o YYYY/MM/DD
+    if (p1.length === 4) {
+      return `${p1}-${p2}-${p3.padStart(2, '0')}`;
+    }
+
+    // Caso DD-MM-YYYY o DD/MM/YYYY -> Convertir a YYYY-MM-DD
+    if (p3.length === 4) {
+      return `${p3}-${p2}-${p1}`;
+    }
+  }
+
+  // 3. Intento genérico Date parse
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    return d.toISOString().split('T')[0];
+  }
+
   return null;
 }
-
 async function ejecutarSincronizacionDrive() {
   console.log(`[${new Date().toLocaleString()}] 🔄 Iniciando sincronización desde Google Drive...`);
   try {
