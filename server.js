@@ -60,9 +60,12 @@ async function ejecutarSincronizacionDrive() {
 
     if (errBD) throw errBD;
 
-    const fechaLimiteBD = (ultimoRegistro && ultimoRegistro.length > 0 && ultimoRegistro[0].fecha)
-      ? new Date(ultimoRegistro[0].fecha)
-      : new Date('2000-01-01');
+    // Fecha límite desde la base de datos (Ej: 2026-08-27)
+    const fechaLimiteStr = (ultimoRegistro && ultimoRegistro.length > 0 && ultimoRegistro[0].fecha)
+      ? ultimoRegistro[0].fecha
+      : '2000-01-01';
+
+    console.log(`📌 Fecha máxima actual en Supabase: ${fechaLimiteStr}`);
 
     // SOPORTE DE CREDENCIALES
     let auth;
@@ -101,7 +104,7 @@ async function ejecutarSincronizacionDrive() {
       return null;
     };
 
-    // 2. OBTENER TOTAL REAL DE FILAS DE LA HOJA
+    // 2. OBTENER METADATOS DE LA HOJA
     const sheetInfo = await sheets.spreadsheets.get({
       spreadsheetId,
       fields: 'sheets.properties(title,gridProperties/rowCount)'
@@ -109,12 +112,12 @@ async function ejecutarSincronizacionDrive() {
     const detalleSheet = sheetInfo.data.sheets.find(s => s.properties.title === 'Detalle');
     const totalFilasHoja = detalleSheet ? detalleSheet.properties.gridProperties.rowCount : 140000;
 
-    // 3. LEER LAS ÚLTIMAS 10.000 FILAS PARA ASEGURAR COBERTURA DE DÍAS ANTERIORES
-    const CANTIDAD_FILAS_LEER = 10000;
+    // 3. LEER LAS ÚLTIMAS 15.000 FILAS
+    const CANTIDAD_FILAS_LEER = 15000;
     const filaInicio = Math.max(2, totalFilasHoja - CANTIDAD_FILAS_LEER);
     const range = `Detalle!A${filaInicio}:AE${totalFilasHoja}`;
 
-    console.log(`📊 Leyendo rango ampliado: ${range}`);
+    console.log(`📊 Leyendo rango: ${range}`);
     const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
     const filas = response.data.values || [];
 
@@ -133,7 +136,6 @@ async function ejecutarSincronizacionDrive() {
       const fechaISO = formatearFecha(fechaTexto);
       if (!fechaISO) continue;
 
-      const fechaFila = new Date(fechaISO);
       const nombreVendedor = (fila[3] !== undefined && fila[3] !== null) ? fila[3].toString().trim() : '';
       const rutCliente = (fila[4] !== undefined && fila[4] !== null) ? fila[4].toString().trim() : '';
       const nombreCliente = (fila[5] !== undefined && fila[5] !== null) ? fila[5].toString().trim() : '';
@@ -141,7 +143,8 @@ async function ejecutarSincronizacionDrive() {
 
       const esExcluido = EXCLUIDOS.some(e => nombreVendedor.toLowerCase().includes(e));
 
-      if (fechaFila > fechaLimiteBD && !esExcluido) {
+      // Comparación directa de cadenas ISO (YYYY-MM-DD) para evitar fallos de huso horario
+      if (fechaISO > fechaLimiteStr && !esExcluido) {
         const cantidad = parseMonto(getVal(fila, 'cantidad'));
         const precio = parseMonto(getVal(fila, 'precio'));
         let total = parseMonto(getVal(fila, 'total'));
