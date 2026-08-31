@@ -64,7 +64,7 @@ async function ejecutarSincronizacionDrive() {
       ? new Date(ultimoRegistro[0].fecha)
       : new Date('2000-01-01');
 
-    // SOPORTE DE CREDENCIALES (RENDER O LOCAL)
+    // SOPORTE DE CREDENCIALES
     let auth;
     if (process.env.GOOGLE_CREDENTIALS) {
       const keys = JSON.parse(process.env.GOOGLE_CREDENTIALS);
@@ -80,19 +80,19 @@ async function ejecutarSincronizacionDrive() {
     const sheets = google.sheets({ version: 'v4', auth });
     const spreadsheetId = '1f1TFuHzonDow_W-SZd3qpqJiTW1NKS8TzZ_NxSPhgJo';
 
-    const response = await sheets.spreadsheets.values.get({
+    // 1. OBTENER SOLO EL ENCABEZADO (Fila 1) PARA AHORRAR MEMORIA
+    const resEncabezado = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: 'Detalle!A1:AE',
+      range: 'Detalle!A1:AE1',
     });
 
-    const filas = response.data.values || [];
-    if (filas.length < 2) {
-      console.log('ℹ️ No hay datos para procesar.');
-      return { ok: true, insertados: 0, mensaje: 'Sin filas' };
+    const filasEncabezado = resEncabezado.data.values || [];
+    if (filasEncabezado.length === 0) {
+      console.log('ℹ️ No se pudieron leer los encabezados.');
+      return { ok: true, insertados: 0, mensaje: 'Sin encabezados' };
     }
 
-    const encabezados = filas[0].map(h => h.toString().toLowerCase().trim());
-
+    const encabezados = filasEncabezado[0].map(h => h.toString().toLowerCase().trim());
     const getVal = (fila, nombreColumna) => {
       const idx = encabezados.findIndex(h => h.includes(nombreColumna.toLowerCase()));
       if (idx !== -1 && fila[idx] !== undefined && fila[idx] !== null) {
@@ -101,11 +101,28 @@ async function ejecutarSincronizacionDrive() {
       return null;
     };
 
+    // 2. OBTENER METADATOS DE LA HOJA PARA CONOCER EL NÚMERO TOTAL DE FILAS
+    const sheetInfo = await sheets.spreadsheets.get({ spreadsheetId });
+    const detalleSheet = sheetInfo.data.sheets.find(s => s.properties.title === 'Detalle');
+    const totalFilasHoja = detalleSheet ? detalleSheet.properties.gridProperties.rowCount : 50000;
+
+    // 3. LEER SOLO LAS ÚLTIMAS 1,500 FILAS DE GOOGLE SHEETS
+    const filaInicio = Math.max(2, totalFilasHoja - 1500);
+    const range = `Detalle!A${filaInicio}:AE${totalFilasHoja}`;
+
+    console.log(`📊 Leyendo rango optimizado: ${range}`);
+    const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+    const filas = response.data.values || [];
+
+    if (filas.length === 0) {
+      console.log('ℹ️ No hay datos para procesar.');
+      return { ok: true, insertados: 0, mensaje: 'Sin filas' };
+    }
+
     const registrosNuevos = [];
 
-    for (let i = 1; i < filas.length; i++) {
+    for (let i = 0; i < filas.length; i++) {
       const fila = filas[i];
-
       const fechaTexto = getVal(fila, 'fecha');
       if (!fechaTexto) continue;
 
@@ -113,7 +130,6 @@ async function ejecutarSincronizacionDrive() {
       if (!fechaISO) continue;
 
       const fechaFila = new Date(fechaISO);
-
       const nombreVendedor = (fila[3] !== undefined && fila[3] !== null) ? fila[3].toString().trim() : '';
       const rutCliente = (fila[4] !== undefined && fila[4] !== null) ? fila[4].toString().trim() : '';
       const nombreCliente = (fila[5] !== undefined && fila[5] !== null) ? fila[5].toString().trim() : '';
@@ -167,27 +183,21 @@ async function ejecutarSincronizacionDrive() {
     }
 
     if (registrosNuevos.length > 0) {
-      // INSERCIÓN POR LOTES PARA NO SOBRECARGAR LA MEMORIA DE RENDER
-      const TAMANO_LOTE = 300;
+      const TAMANO_LOTE = 200;
       let totalInsertados = 0;
 
       for (let i = 0; i < registrosNuevos.length; i += TAMANO_LOTE) {
         const lote = registrosNuevos.slice(i, i + TAMANO_LOTE);
-        const { error: errInsert } = await supabase
-          .from('Ventas_detalle')
-          .insert(lote);
+        const { error: errInsert } = await supabase.from('Ventas_detalle').insert(lote);
 
-        if (errInsert) {
-          console.error(`❌ Error al insertar lote desde índice ${i}:`, errInsert.message);
-          throw errInsert;
-        }
+        if (errInsert) throw errInsert;
 
         totalInsertados += lote.length;
-        console.log(`📦 Lote procesado: ${totalInsertados} / ${registrosNuevos.length} registros.`);
+        console.log(`📦 Lote insertado: ${totalInsertados} / ${registrosNuevos.length}`);
       }
 
       cacheUltimaActualizacion = 0;
-      console.log(`✅ Sincronización exitosa: ${registrosNuevos.length} registros insertados.`);
+      console.log(`✅ Sincronización exitosa: ${registrosNuevos.length} registros nuevos.`);
       return { ok: true, insertados: registrosNuevos.length, mensaje: 'Sincronización exitosa' };
     }
 
