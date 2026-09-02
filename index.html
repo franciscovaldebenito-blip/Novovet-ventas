@@ -42,7 +42,7 @@
     .filter-bar { background: #ffffff; padding: 12px 16px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 16px; display: flex; gap: 12px; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
     .filter-group { display: flex; align-items: center; gap: 8px; }
     .filter-group label { font-size: 12px; font-weight: 600; color: #64748b; }
-    select, input[type="text"], input[type="number"] { padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none; background: #fff; }
+    select, input[type="text"], input[type="number"], input[type="date"] { padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none; background: #fff; }
     select:focus, input:focus { border-color: #059669; }
 
     /* ESTRUCTURA PRINCIPAL DEL RESUMEN */
@@ -121,11 +121,11 @@
       <p>Acceso al Panel Analytics</p>
       <input type="email" id="loginEmail" class="login-input" placeholder="correo@novovet.cl">
       <input type="password" id="loginPassword" class="login-input" placeholder="••••••••">
-      <button class="btn-login" onclick="iniciarSesion()">Ingresar</button>
+      <button class="btn-login" type="button" onclick="iniciarSesion()">Ingresar</button>
     </div>
   </div>
 
-  <!-- PANEL -->
+  <!-- PANEL PRINCIPAL -->
   <div id="screen-app" style="display: none;">
     <header>
       <div class="brand">
@@ -133,21 +133,55 @@
         <span id="txtRol">ROL: ADMINISTRADOR</span>
       </div>
 
-      <nav>
-        <button class="nav-btn active" onclick="cambiarPestana('resumen', this)">RESUMEN</button>
-        <button class="nav-btn" onclick="cambiarPestana('metas', this)">METAS</button>
-        <button class="nav-btn" onclick="cambiarPestana('detalle', this)">VENTA DETALLE</button>
-        <button class="nav-btn" onclick="cambiarPestana('proveedores', this)">PROVEEDORES</button>
-      </nav>
+    <nav>
+  <button class="nav-btn active" type="button" onclick="cambiarPestana('resumen', this)">RESUMEN</button>
+  <button class="nav-btn" type="button" onclick="cambiarPestana('metas', this)">METAS</button>
+  <button class="nav-btn" type="button" onclick="cambiarPestana('detalle', this)">VENTA DETALLE</button>
+  <button class="nav-btn" type="button" onclick="cambiarPestana('proveedores', this)">PROVEEDORES</button>
+  <!-- BOTÓN DE CIERRES CORREGIDO -->
+  <button class="nav-btn" type="button" onclick="cambiarPestana('cierres', this)">CIERRES</button>
+</nav>
 
       <div class="actions">
-        <button class="btn-action" id="btnAccesos" onclick="abrirModalAccesos()">Accesos</button>
-        <button class="btn-action" onclick="recargarActual(true)">Actualizar</button>
-        <button class="btn-action btn-danger" onclick="cerrarSesion()">Salir</button>
+        <button class="btn-action" type="button" id="btnAccesos" onclick="abrirModalAccesos()">Accesos</button>
+        <button class="btn-action" type="button" id="btnSincronizar" style="background: #0284c7; color: white; border: none;" onclick="sincronizarBDManual()">Sync BD 🔄</button>
+        <button class="btn-action" type="button" onclick="recargarActual(true)">Actualizar</button>
+        <button class="btn-action btn-danger" type="button" onclick="cerrarSesion()">Salir</button>
       </div>
     </header>
 
     <main>
+
+<!-- PESTAÑA HISTÓRICO CIERRES -->
+<section id="tab-cierres" class="tab-content" style="display:none;">
+  <div class="filter-bar">
+    <div style="font-weight:700; font-size:14px; color:#334155;">Histórico de Cierres Mensuales</div>
+    <div class="filter-group" style="margin-left:auto;">
+      <label>AÑO</label>
+      <select id="selectAnioCierres" onchange="cargarHistoricoCierres()">
+        <option value="2026" selected>2026</option>
+        <option value="2025">2025</option>
+      </select>
+    </div>
+  </div>
+
+  <div style="overflow-x:auto; background:#fff; border-radius:8px; border:1px solid #e2e8f0; margin-top:15px;">
+    <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
+      <thead>
+        <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+          <th style="padding:10px; text-align:left;">Vendedor</th>
+          <th>Ene</th><th>Feb</th><th>Mar</th><th>Abr</th>
+          <th>May</th><th>Jun</th><th>Jul</th><th>Ago</th>
+          <th>Sep</th><th>Oct</th><th>Nov</th><th>Dic</th>
+        </tr>
+      </thead>
+      <tbody id="tbodyCierres">
+        <!-- Se llena dinámicamente -->
+      </tbody>
+    </table>
+  </div>
+</section>
+
       <!-- 1. RESUMEN -->
       <section id="tab-resumen" class="tab-content active">
         <div class="grid-summary">
@@ -165,11 +199,11 @@
             </div>
           </div>
 
-          <!-- COLUMNA DERECHA: GRÁFICO + TARJETAS ACOMODADAS DEBAJO -->
+          <!-- COLUMNA DERECHA: GRÁFICO + TARJETAS -->
           <div class="main-chart-card">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
               <h3 id="tituloGrafico" style="font-size:13px; font-weight:700; color:#475569;">Evolución Diaria - Ventas Generales</h3>
-              <button class="btn-action" id="btnRestablecerGrafico" onclick="restablecerGraficoGeneral()">Ver Gráfico General</button>
+              <button class="btn-action" type="button" id="btnRestablecerGrafico" onclick="restablecerGraficoGeneral()">Ver Gráfico General</button>
             </div>
             
             <div style="position: relative; height: 300px; width: 100%;">
@@ -181,7 +215,7 @@
         </div>
       </section>
 
-      <!-- 2. METAS -->
+    <!-- 2. METAS -->
       <section id="tab-metas" class="tab-content">
         <div class="filter-bar">
           <div style="font-weight:700; font-size:14px; color:#334155;">Cumplimiento de Metas</div>
@@ -193,7 +227,12 @@
             <label>AÑO</label>
             <select id="selectAnioMetas" onchange="consultarMetas()"></select>
           </div>
-          <button class="btn-action" style="background:#0284c7; color:#fff; border:none;" id="btnAsignarMeta" onclick="abrirModalMeta()">+ Asignar Meta</button>
+
+          <!-- BOTÓN AGREGADO PARA CERRAR MES -->
+          <button class="btn-action" type="button" style="background:#e67e22; color:#fff; border:none;" id="btnCerrarMes" onclick="cerrarMesActual()">🔒 Cerrar Mes</button>
+
+          <!-- BOTÓN EXISTENTE -->
+          <button class="btn-action" type="button" style="background:#0284c7; color:#fff; border:none;" id="btnAsignarMeta" onclick="abrirModalMeta()">+ Asignar Meta</button>
         </div>
 
         <div class="table-container">
@@ -214,14 +253,14 @@
             <select id="filtroVendedor" onchange="consultarDetalle()"><option value="">Todos los Vendedores</option></select>
           </div>
           <div class="filter-group">
-            <label>Buscar Cliente:</label>
-            <input type="text" id="filtroBuscar" placeholder="Nombre cliente..." oninput="consultarDetalle()">
+            <label>Buscar:</label>
+            <input type="text" id="filtroBuscar" placeholder="Cliente..." oninput="consultarDetalle()">
           </div>
           <div class="filter-group">
             <label>Estado Compra:</label>
             <select id="filtroEstadoCompra" onchange="consultarDetalle()">
-              <option value="TODOS">Todos los Clientes</option>
-              <option value="SIN_COMPRA_AGOSTO">Sin compras en Agosto ($0)</option>
+              <option value="TODOS">Todos</option>
+              <option value="SIN_COMPRA_ACTUAL">Sin compra en el mes actual</option>
             </select>
           </div>
         </div>
@@ -230,7 +269,7 @@
           <table id="tablaDetalle">
             <thead>
               <tr>
-                <th style="width: auto;">Cliente</th>
+                <th>Cliente</th>
                 <th id="thMes2" class="num">-</th>
                 <th id="thMes1" class="num">-</th>
                 <th id="thMesAct" class="num">-</th>
@@ -258,7 +297,7 @@
           <table id="tablaProveedores">
             <thead>
               <tr>
-                <th style="width: auto;">Proveedor / Grupo</th>
+                <th>Proveedor / Grupo</th>
                 <th id="thMesProv2" class="num">-</th>
                 <th id="thMesProv1" class="num">-</th>
                 <th id="thMesProvAct" class="num">-</th>
@@ -278,8 +317,10 @@
         <h3 style="font-size:16px;">Asignar Metas Mensuales</h3>
         <span style="cursor:pointer; font-weight:bold; color:#64748b;" onclick="cerrarModalMeta()">✕</span>
       </div>
-      <div id="listaEdicionMetas" style="max-height:280px; overflow-y:auto; margin-bottom:15px; padding-right:4px;"></div>
-      <button class="btn-login" onclick="guardarMetas()">Guardar Metas</button>
+      <form onsubmit="event.preventDefault(); guardarMetas();">
+        <div id="listaEdicionMetas" style="max-height:280px; overflow-y:auto; margin-bottom:15px; padding-right:4px;"></div>
+        <button class="btn-login" type="submit">Guardar Metas</button>
+      </form>
     </div>
   </div>
 
@@ -299,7 +340,7 @@
           <option value="VENDOR">Rol: Vendedor</option>
         </select>
         <select id="accVinculo" class="login-input" style="margin:0"><option value="">-- Sin Vincular --</option></select>
-        <button class="btn-login" style="background:#059669;" onclick="guardarUsuario()">Guardar Usuario</button>
+        <button class="btn-login" type="button" style="background:#059669;" onclick="guardarUsuario()">Guardar Usuario</button>
       </div>
 
       <h4 style="font-size:12px; color:#64748b; margin-bottom:8px;">Usuarios Registrados</h4>
@@ -307,459 +348,716 @@
     </div>
   </div>
 
+
+
 <script>
-  let chartEvolucionInstance = null;
-  let pestanaActual = 'resumen';
-  let datosEvolucionGeneral = [];
-  let usuarioActual = null;
-  let vendedoresMetasCache = [];
-  let vendedorSeleccionadoActual = null;
+    let chartEvolucionInstance = null;
+    let pestanaActual = 'resumen';
+    let datosEvolucionGeneral = [];
+    let usuarioActual = null;
+    let vendedoresMetasCache = [];
+    let vendedorSeleccionadoActual = null;
 
-  // LISTA DE NOMINA DE VENDEDORES/CUENTAS EXCLUIDAS
-  const EXCLUIDOS = ["comercial y rebate", "cuenta inactiva", "daniel reyes", "fernando negrete"];
+    // FECHA DINÁMICA ACTUAL DEL SISTEMA
+    const HOY = new Date();
+    const MES_ACTUAL = HOY.getMonth() + 1;
+    const ANIO_ACTUAL = HOY.getFullYear();
 
-  function esExcluido(nombre) {
-    if (!nombre) return false;
-    const n = String(nombre).toLowerCase().trim();
-    return EXCLUIDOS.some(e => n.includes(e));
-  }
+    // LISTA DE NOMINA DE VENDEDORES/CUENTAS EXCLUIDAS
+    const EXCLUIDOS = ["comercial y rebate", "cuenta inactiva", "daniel reyes", "fernando negrete"];
 
-  function escapeHTML(str) {
-    return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
-  }
-
-  function fmt(num) {
-    return '$' + Math.round(num || 0).toLocaleString('es-CL');
-  }
-
-  function esRolVendedor(usuario) {
-    if (!usuario || !usuario.rol) return false;
-    const r = String(usuario.rol).toUpperCase().trim();
-    return r === 'VENDOR' || r === 'VENDEDOR';
-  }
-
-  function obtenerNombreVendedor(usuario) {
-    if (!usuario) return '';
-    return usuario.vendedor_vinculado || usuario.nombre || '';
-  }
-
-  document.addEventListener("DOMContentLoaded", () => {
-    inicializarSelectsFecha();
-  });
-
-  function inicializarSelectsFecha() {
-    const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
-    const mAct = 8;
-    const aAct = 2026;
-
-    const elM = document.getElementById('selectMesMetas');
-    if (elM) elM.innerHTML = nombresMeses.map((m, i) => `<option value="${i+1}" ${i+1 === mAct ? 'selected' : ''}>${m}</option>`).join('');
-
-    const elA = document.getElementById('selectAnioMetas');
-    if (elA) elA.innerHTML = [aAct - 1, aAct, aAct + 1].map(a => `<option value="${a}" ${a === aAct ? 'selected' : ''}>${a}</option>`).join('');
-  }
-
-  async function iniciarSesion() {
-    const email = document.getElementById('loginEmail').value.trim();
-    if (!email) return alert('Ingrese correo');
-
-    try {
-      const res = await fetch('/api/usuarios');
-      const usuarios = await res.json();
-      const user = usuarios.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-      if (user) {
-        usuarioActual = user;
-      } else {
-        usuarioActual = { nombre: email.split('@')[0], email, rol: 'ADMIN', vendedor_vinculado: null };
-      }
-
-      document.getElementById('screen-login').style.display = 'none';
-      document.getElementById('screen-app').style.display = 'block';
-
-      const esVendedor = esRolVendedor(usuarioActual);
-
-      document.getElementById('txtRol').innerText = `ROL: ${esVendedor ? 'VENDEDOR' : 'ADMINISTRADOR'}`;
-
-      if (esVendedor) {
-        document.getElementById('btnAccesos').style.display = 'none';
-        document.getElementById('btnAsignarMeta').style.display = 'none';
-        document.getElementById('containerFiltroVendedor').style.display = 'none';
-        document.getElementById('containerFiltroVendedorProv').style.display = 'none';
-        document.getElementById('btnRestablecerGrafico').style.display = 'none';
-        document.getElementById('lblRanking').innerText = 'MI RENDIMIENTO';
-      } else {
-        document.getElementById('btnAccesos').style.display = 'inline-block';
-        document.getElementById('btnAsignarMeta').style.display = 'inline-block';
-        document.getElementById('containerFiltroVendedor').style.display = 'flex';
-        document.getElementById('containerFiltroVendedorProv').style.display = 'flex';
-        document.getElementById('btnRestablecerGrafico').style.display = 'inline-block';
-        document.getElementById('lblRanking').innerText = 'RANKING VENDEDORES';
-      }
-
-      await poblarTodosLosSelectsVendedores();
-      recargarActual();
-    } catch (e) {
-      alert('Error de autenticación');
+    function esExcluido(nombre) {
+      if (!nombre) return false;
+      const n = String(nombre).toLowerCase().trim();
+      return EXCLUIDOS.some(e => n.includes(e));
     }
+
+    function escapeHTML(str) {
+      if (!str) return '';
+      return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
+    }
+
+    function fmt(num) {
+      return '$' + Math.round(num || 0).toLocaleString('es-CL');
+    }
+
+    function esRolVendedor(usuario) {
+      if (!usuario || !usuario.rol) return false;
+      const r = String(usuario.rol).toUpperCase().trim();
+      return r === 'VENDOR' || r === 'VENDEDOR';
+    }
+
+    function obtenerNombreVendedor(usuario) {
+      if (!usuario) return '';
+      return usuario.vendedor_vinculado || usuario.nombre || '';
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      inicializarSelectsFecha();
+    });
+
+    function inicializarSelectsFecha() {
+      const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+      const elM = document.getElementById('selectMesMetas');
+      if (elM) elM.innerHTML = nombresMeses.map((m, i) => `<option value="${i+1}" ${i+1 === MES_ACTUAL ? 'selected' : ''}>${m}</option>`).join('');
+
+      const elA = document.getElementById('selectAnioMetas');
+      if (elA) elA.innerHTML = [ANIO_ACTUAL - 1, ANIO_ACTUAL, ANIO_ACTUAL + 1].map(a => `<option value="${a}" ${a === ANIO_ACTUAL ? 'selected' : ''}>${a}</option>`).join('');
+    }
+
+    async function iniciarSesion() {
+      const email = document.getElementById('loginEmail').value.trim();
+      if (!email) return alert('Ingrese correo');
+
+      try {
+        const res = await fetch('/api/usuarios');
+        const usuarios = await res.json();
+        const user = usuarios.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+        if (user) {
+          usuarioActual = user;
+        } else {
+          usuarioActual = { nombre: email.split('@')[0], email, rol: 'ADMIN', vendedor_vinculado: null };
+        }
+
+        document.getElementById('screen-login').style.display = 'none';
+        document.getElementById('screen-app').style.display = 'block';
+
+        const esVendedor = esRolVendedor(usuarioActual);
+
+        document.getElementById('txtRol').innerText = `ROL: ${esVendedor ? 'VENDEDOR' : 'ADMINISTRADOR'}`;
+
+        if (esVendedor) {
+          document.getElementById('btnAccesos').style.display = 'none';
+          document.getElementById('btnSincronizar').style.display = 'none';
+          document.getElementById('btnAsignarMeta').style.display = 'none';
+          document.getElementById('containerFiltroVendedor').style.display = 'none';
+          document.getElementById('containerFiltroVendedorProv').style.display = 'none';
+          document.getElementById('btnRestablecerGrafico').style.display = 'none';
+          document.getElementById('lblRanking').innerText = 'MI RENDIMIENTO';
+        } else {
+          document.getElementById('btnAccesos').style.display = 'inline-block';
+          document.getElementById('btnSincronizar').style.display = 'inline-block';
+          document.getElementById('btnAsignarMeta').style.display = 'inline-block';
+          document.getElementById('containerFiltroVendedor').style.display = 'flex';
+          document.getElementById('containerFiltroVendedorProv').style.display = 'flex';
+          document.getElementById('btnRestablecerGrafico').style.display = 'inline-block';
+          document.getElementById('lblRanking').innerText = 'RANKING VENDEDORES';
+        }
+
+        await poblarTodosLosSelectsVendedores();
+        recargarActual();
+      } catch (e) {
+        alert('Error de autenticación');
+      }
+    }
+
+    function cerrarSesion() {
+      usuarioActual = null;
+      vendedorSeleccionadoActual = null;
+      document.getElementById('screen-app').style.display = 'none';
+      document.getElementById('screen-login').style.display = 'flex';
+    }
+
+    function cambiarPestana(nombrePestana, elementoBtn) {
+      pestanaActual = nombrePestana; // ✅ Guardamos la pestaña activa en la variable global
+
+      // 1. Quitar estado activo de los botones de navegación
+      const botones = document.querySelectorAll('nav .nav-btn');
+      botones.forEach(btn => btn.classList.remove('active'));
+
+      // 2. Activar el botón presionado
+      if (elementoBtn) {
+        elementoBtn.classList.add('active');
+      }
+
+      // 3. Ocultar todas las secciones
+      const secciones = document.querySelectorAll('.tab-content');
+      secciones.forEach(sec => sec.style.display = 'none');
+
+      // 4. Mapeo de pestaña a ID de HTML
+      let idSeccion = '';
+      if (nombrePestana === 'resumen') idSeccion = 'tab-resumen';
+      else if (nombrePestana === 'metas') idSeccion = 'tab-metas';
+      else if (nombrePestana === 'detalle') idSeccion = 'tab-detalle';
+      else if (nombrePestana === 'proveedores') idSeccion = 'tab-proveedores';
+      else if (nombrePestana === 'cierres') idSeccion = 'tab-cierres';
+
+      // 5. Mostrar la sección seleccionada
+      const seccionObjetivo = document.getElementById(idSeccion);
+      if (seccionObjetivo) {
+        seccionObjetivo.style.display = 'block';
+      }
+
+      // 6. CARGAR DATOS SEGÚN LA PESTAÑA SELECCIONADA
+      if (nombrePestana === 'resumen' && typeof consultarResumen === 'function') {
+        consultarResumen();
+      } 
+      else if (nombrePestana === 'metas' && typeof consultarMetas === 'function') {
+        consultarMetas();
+      } 
+      else if (nombrePestana === 'detalle' && typeof consultarDetalle === 'function') {
+        consultarDetalle();
+      } 
+      else if (nombrePestana === 'proveedores' && typeof consultarPorProveedor === 'function') {
+        consultarPorProveedor(); // ✅ Corregido el nombre de la función invocada
+      } 
+      else if (nombrePestana === 'cierres' && typeof cargarHistoricoCierres === 'function') {
+        cargarHistoricoCierres();
+      }
+    }
+
+    function recargarActual(forzar = false) {
+      if (pestanaActual === 'resumen') consultarResumen(forzar);
+      else if (pestanaActual === 'metas') consultarMetas();
+      else if (pestanaActual === 'detalle') consultarDetalle();
+      else if (pestanaActual === 'proveedores') consultarPorProveedor(); // ✅ Corregido
+      else if (pestanaActual === 'cierres') cargarHistoricoCierres();
+    }
+
+ async function cargarHistoricoCierres() {
+  const selectAnio = document.getElementById('selectAnioCierres');
+  const anio = selectAnio ? selectAnio.value : 2026;
+  const tbody = document.getElementById('tbodyCierres');
+  const thead = document.querySelector('#tab-cierres table thead tr');
+  
+  if (!tbody) return;
+
+  // 1. Detectar el rol y el nombre del vendedor activo
+  const esVendedor = esRolVendedor(usuarioActual);
+  const nombreVendedorLogueado = esVendedor ? obtenerNombreVendedor(usuarioActual) : '';
+  const rol = esVendedor ? 'VENDEDOR' : 'ADMINISTRADOR';
+
+  tbody.innerHTML = `<tr><td colspan="13" style="padding:20px;">Cargando histórico de cierres...</td></tr>`;
+
+  try {
+    const res = await fetch(`/api/ventas/historico-cierres?anio=${anio}&usuarioLogueado=${encodeURIComponent(nombreVendedorLogueado)}&rol=${rol}`);
+    const data = await res.json();
+
+    let listaVendedores = data.vendedores || [];
+
+    // 2. Filtro de seguridad en JavaScript: si es rol VENDEDOR, se deja ÚNICAMENTE su propia fila
+    if (esVendedor && nombreVendedorLogueado) {
+      listaVendedores = listaVendedores.filter(v => 
+        v.vendedor && v.vendedor.toLowerCase().includes(nombreVendedorLogueado.toLowerCase())
+      );
+    }
+
+    if (listaVendedores.length === 0) {
+      if (thead) thead.innerHTML = `<th style="width:220px; padding:10px; text-align:left;">Vendedor</th><th></th>`;
+      tbody.innerHTML = `<tr><td colspan="2" style="padding:20px;">No hay registros de cierre para mostrar.</td></tr>`;
+      return;
+    }
+
+    const nombresMeses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+
+    // 3. Identificar cuáles meses tienen cierres registrados para la lista resultante
+    const indicesMesesConDatos = [];
+    for (let i = 0; i < 12; i++) {
+      const tieneCierreEnEsteMes = listaVendedores.some(v => v.meses && v.meses[i] && Boolean(v.meses[i].cerrado));
+      if (tieneCierreEnEsteMes) {
+        indicesMesesConDatos.push(i);
+      }
+    }
+
+    if (indicesMesesConDatos.length === 0) {
+      if (thead) thead.innerHTML = `<th style="width:220px; padding:10px; text-align:left;">Vendedor</th><th></th>`;
+      tbody.innerHTML = `<tr><td colspan="2" style="padding:20px;">No hay meses cerrados registrados para este año.</td></tr>`;
+      return;
+    }
+
+    // 4. Encabezado dinámico
+    if (thead) {
+      let htmlHeader = `<th style="width:220px; padding:10px; text-align:left;">Vendedor</th>`;
+      indicesMesesConDatos.forEach(idx => {
+        htmlHeader += `<th style="width:160px; padding:10px; text-align:left;">${nombresMeses[idx]}</th>`;
+      });
+      htmlHeader += `<th></th>`;
+      thead.innerHTML = htmlHeader;
+    }
+
+    // 5. Generar filas solo para el vendedor filtrado
+    tbody.innerHTML = listaVendedores.map(v => {
+      const celdasMeses = indicesMesesConDatos.map(idx => {
+        const m = v.meses[idx] || {};
+        const metaMonto = m.meta || 0;
+        const obtenidoMonto = m.monto || 0;
+        const pct = m.pct || 0;
+
+        const badgeColor = pct >= 100 ? '#dcfce7; color:#166534;' : '#fef3c7; color:#92400e;';
+
+        return `
+          <td style="width:160px; padding:8px 10px; text-align:left; border-left:1px solid #f1f5f9; vertical-align:top;">
+            <div style="font-size:11px; color:#64748b; margin-bottom:2px;">
+              Meta: <span style="font-weight:600; color:#334155;">$${metaMonto.toLocaleString('es-CL')}</span>
+            </div>
+            <div style="font-size:12px; font-weight:700; color:#0f172a; margin-bottom:4px;">
+              Obt: $${obtenidoMonto.toLocaleString('es-CL')}
+            </div>
+            <span style="display:inline-block; padding:2px 6px; border-radius:10px; font-weight:700; font-size:10px; background:${badgeColor}">
+              ${pct}%
+            </span>
+          </td>
+        `;
+      }).join('');
+
+      return `
+        <tr style="border-bottom:1px solid #f1f5f9;">
+          <td style="width:220px; padding:10px; text-align:left; font-weight:600; color:#1e293b; vertical-align:top;">${v.vendedor}</td>
+          ${celdasMeses}
+          <td></td>
+        </tr>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error(err);
+    tbody.innerHTML = `<tr><td colspan="13" style="padding:20px; color:red;">Error al cargar datos.</td></tr>`;
   }
+}
 
-  function cerrarSesion() {
-    usuarioActual = null;
-    vendedorSeleccionadoActual = null;
-    document.getElementById('screen-app').style.display = 'none';
-    document.getElementById('screen-login').style.display = 'flex';
-  }
+    async function cerrarMesActual() {
+      const selectMes = document.getElementById('selectMesMetas');
+      const selectAnio = document.getElementById('selectAnioMetas');
 
-  function cambiarPestana(id, btn) {
-    pestanaActual = id;
-    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      const mesVal = selectMes ? selectMes.value : null;
+      const anioVal = selectAnio ? selectAnio.value : null;
+      const mesNombre = selectMes ? selectMes.options[selectMes.selectedIndex].text : '';
 
-    document.getElementById(`tab-${id}`).classList.add('active');
-    btn.classList.add('active');
+      if (!mesVal || !anioVal) {
+        alert("Por favor selecciona un mes y un año válidos.");
+        return;
+      }
 
-    recargarActual();
-  }
+      const confirmar = confirm(`¿Estás seguro de congelar y cerrar el mes de ${mesNombre} ${anioVal}?\n\nLos montos actuales alcanzados por cada vendedor se guardarán de forma permanente en 'cierre_mes'.`);
 
-  function recargarActual(forzar = false) {
-    if (pestanaActual === 'resumen') consultarResumen(forzar);
-    else if (pestanaActual === 'metas') consultarMetas();
-    else if (pestanaActual === 'detalle') consultarDetalle();
-    else if (pestanaActual === 'proveedores') consultarPorProveedor();
-  }
+      if (!confirmar) return;
 
-  async function consultarResumen(forzar = false) {
-    const esVendedor = esRolVendedor(usuarioActual);
-    const vend = esVendedor ? obtenerNombreVendedor(usuarioActual) : '';
+      const btn = document.getElementById('btnCerrarMes');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '⏳ Cerrando...';
+      }
 
-    try {
-      const res = await fetch(`/api/ventas/consulta-mes?anio=2026&mes=8&vendedorLogueado=${encodeURIComponent(vend)}&forzar=${forzar}`);
-      const data = await res.json();
+      try {
+        const res = await fetch('/api/ventas/metas/cerrar-mes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anio: Number(anioVal), mes: Number(mesVal) })
+        });
 
-      const total = data.resumen?.totalVendido || 0;
-      document.getElementById('kpiTotalVendido').innerText = fmt(total);
+        const data = await res.json();
 
-      datosEvolucionGeneral = data.resumen?.evolucionDiaria || [];
+        if (data.ok) {
+          alert(`✅ ${data.mensaje}`);
+          if (typeof consultarMetas === 'function') {
+            consultarMetas();
+          }
+        } else {
+          alert(`❌ Error: ${data.error}`);
+        }
+      } catch (err) {
+        console.error('Error al cerrar mes:', err);
+        alert('❌ Ocurrió un error al procesar el cierre del mes.');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = '🔒 Cerrar Mes';
+        }
+      }
+    }
+
+    async function sincronizarBDManual() {
+      const btn = document.getElementById('btnSincronizar');
+      btn.disabled = true;
+      btn.innerText = 'Sincronizando... ⏳';
+
+      try {
+        const res = await fetch('/api/ventas/sincronizar-drive', { method: 'POST' });
+        const data = await res.json();
+        
+        if (res.ok) {
+          alert('🔄 Sincronización iniciada en segundo plano. La base de datos se actualizará en unos momentos.');
+          setTimeout(() => {
+            recargarActual(true);
+          }, 5000);
+        } else {
+          alert('❌ Error al iniciar sincronización: ' + (data.error || 'Error desconocido'));
+        }
+      } catch (err) {
+        alert('❌ Error de conexión al servidor.');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Sync BD 🔄';
+      }
+    }
+
+    async function consultarResumen(forzar = false) {
+      const esVendedor = esRolVendedor(usuarioActual);
+      const vend = esVendedor ? obtenerNombreVendedor(usuarioActual) : '';
+
+      try {
+        const res = await fetch(`/api/ventas/consulta-mes?anio=${ANIO_ACTUAL}&mes=${MES_ACTUAL}&vendedorLogueado=${encodeURIComponent(vend)}&forzar=${forzar}`);
+        const data = await res.json();
+
+        const total = data.resumen?.totalVendido || 0;
+        document.getElementById('kpiTotalVendido').innerText = fmt(total);
+
+        datosEvolucionGeneral = data.resumen?.evolucionDiaria || [];
+        
+        const tituloGraf = esVendedor ? `Ventas de ${vend || 'Mis Ventas'}` : 'Ventas Generales';
+        actualizarGrafico(datosEvolucionGeneral, tituloGraf);
+
+        const vendedores = (data.resumen?.vendedores || []).filter(v => !esExcluido(v.vendedor));
+
+        let htmlRank = '';
+        vendedores.forEach(v => {
+          htmlRank += `<div style="display:flex; justify-content:space-between; font-size:12px; padding:6px 0; border-bottom:1px solid #f1f5f9;"><span>${escapeHTML(v.vendedor)}</span><b>${fmt(v.monto)}</b></div>`;
+        });
+        document.getElementById('listaRankingVendedores').innerHTML = htmlRank;
+
+        let htmlCards = '';
+        vendedores.forEach(v => {
+          const pct = v.pct || 0;
+          const badgeClass = pct >= 100 ? 'badge-success' : (pct >= 50 ? 'badge-warning' : 'badge-danger');
+          htmlCards += `
+            <div class="card-vendedor-compact" id="card_vend_${escapeHTML(v.vendedor)}" onclick="filtrarGraficoPorVendedor('${escapeHTML(v.vendedor)}', this)">
+              <div class="v-header" title="${escapeHTML(v.vendedor)}">${escapeHTML(v.vendedor)}</div>
+              <div class="v-monto">${fmt(v.monto)}</div>
+              <div class="v-footer">
+                <span class="v-meta">Meta: ${fmt(v.meta)}</span>
+                <span class="badge-pct ${badgeClass}">${pct}%</span>
+              </div>
+            </div>
+          `;
+        });
+        document.getElementById('gridTarjetasVendedores').innerHTML = htmlCards;
+
+      } catch (err) { console.error(err); }
+    }
+
+    function actualizarGrafico(evolucionData, titulo) {
+      document.getElementById('tituloGrafico').innerText = `Evolución Diaria - ${titulo}`;
+      const ctx = document.getElementById('chartEvolucion')?.getContext('2d');
+      if (!ctx) return;
+
+      const labels = evolucionData.map(d => `Día ${d.dia}`);
+      const valores = evolucionData.map(d => d.monto);
+
+      if (chartEvolucionInstance) chartEvolucionInstance.destroy();
+
+      chartEvolucionInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: titulo,
+            data: valores,
+            borderColor: '#059669',
+            backgroundColor: 'rgba(5, 150, 105, 0.08)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    async function filtrarGraficoPorVendedor(nombreVendedor, cardEl) {
+      if (vendedorSeleccionadoActual === nombreVendedor) {
+        restablecerGraficoGeneral();
+        return;
+      }
+
+      document.querySelectorAll('.card-vendedor-compact').forEach(c => c.classList.remove('selected'));
+      if (cardEl) cardEl.classList.add('selected');
+      vendedorSeleccionadoActual = nombreVendedor;
+
+      try {
+        const res = await fetch(`/api/ventas/consulta-mes?anio=${ANIO_ACTUAL}&mes=${MES_ACTUAL}&vendedorLogueado=${encodeURIComponent(nombreVendedor)}`);
+        const data = await res.json();
+        actualizarGrafico(data.resumen?.evolucionDiaria || [], `Ventas de ${nombreVendedor}`);
+      } catch (e) { console.error(e); }
+    }
+
+    function restablecerGraficoGeneral() {
+      vendedorSeleccionadoActual = null;
+      document.querySelectorAll('.card-vendedor-compact').forEach(c => c.classList.remove('selected'));
       
+      const esVendedor = esRolVendedor(usuarioActual);
+      const vend = esVendedor ? obtenerNombreVendedor(usuarioActual) : '';
       const tituloGraf = esVendedor ? `Ventas de ${vend || 'Mis Ventas'}` : 'Ventas Generales';
       actualizarGrafico(datosEvolucionGeneral, tituloGraf);
+    }
 
-      // FILTRAR VENDEDORES EXCLUIDOS
-      const vendedores = (data.resumen?.vendedores || []).filter(v => !esExcluido(v.vendedor));
+    function calcularPctProyectado(ventaTotal, metaMensual, diasTranscurridos, diasTotales) {
+      if (!metaMensual || metaMensual <= 0 || !diasTotales || diasTotales <= 0) return 0;
+      if (!diasTranscurridos || diasTranscurridos <= 0) return 0;
 
-      let htmlRank = '';
-      vendedores.forEach(v => {
-        htmlRank += `<div style="display:flex; justify-content:space-between; font-size:12px; padding:6px 0; border-bottom:1px solid #f1f5f9;"><span>${escapeHTML(v.vendedor)}</span><b>${fmt(v.monto)}</b></div>`;
-      });
-      document.getElementById('listaRankingVendedores').innerHTML = htmlRank;
+      const promedioDiario = ventaTotal / diasTranscurridos;
+      const ventaProyectada = promedioDiario * diasTotales;
+      return Math.round((ventaProyectada / metaMensual) * 100);
+    }
 
-      let htmlCards = '';
-      vendedores.forEach(v => {
-        const pct = v.pct || 0;
-        const badgeClass = pct >= 100 ? 'badge-success' : (pct >= 50 ? 'badge-warning' : 'badge-danger');
-        htmlCards += `
-          <div class="card-vendedor-compact" id="card_vend_${escapeHTML(v.vendedor)}" onclick="filtrarGraficoPorVendedor('${escapeHTML(v.vendedor)}', this)">
-            <div class="v-header" title="${escapeHTML(v.vendedor)}">${escapeHTML(v.vendedor)}</div>
-            <div class="v-monto">${fmt(v.monto)}</div>
-            <div class="v-footer">
-              <span class="v-meta">Meta: ${fmt(v.meta)}</span>
-              <span class="badge-pct ${badgeClass}">${pct}%</span>
-            </div>
+    async function consultarMetas() {
+      const mesSelect = Number(document.getElementById('selectMesMetas').value);
+      const anioSelect = Number(document.getElementById('selectAnioMetas').value);
+
+      try {
+        const res = await fetch(`/api/ventas/metas?anio=${anioSelect}&mes=${mesSelect}`);
+        const data = await res.json();
+        
+        vendedoresMetasCache = (data.vendedores || []).filter(v => !esExcluido(v.vendedor));
+
+        let trHeader = '<th>Vendedor</th><th class="num">Meta Mensual</th>';
+        (data.tramos || []).forEach(t => {
+          trHeader += `<th class="center">${escapeHTML(t.label)}<span class="subtext">${t.diasHabiles} días hábiles</span></th>`;
+        });
+        trHeader += '<th class="num">Venta Total</th><th class="center">% Avance Mes</th><th class="center">% Proyección</th>';
+        document.getElementById('trHeaderMetas').innerHTML = trHeader;
+
+        let bodyHtml = '';
+        const esVendedor = esRolVendedor(usuarioActual);
+        const vendVinculado = obtenerNombreVendedor(usuarioActual);
+        
+        const diasTotales = data.diasHabilesTotales || 21;
+        let diasTranscurridos = data.diasHabilesTranscurridos;
+
+        const hoy = new Date();
+        if (hoy.getFullYear() === anioSelect && (hoy.getMonth() + 1) === mesSelect) {
+          let habiles = 0;
+          for (let d = 1; d <= hoy.getDate(); d++) {
+            const fecha = new Date(anioSelect, mesSelect - 1, d);
+            const diaSem = fecha.getDay();
+            if (diaSem !== 0 && diaSem !== 6) habiles++;
+          }
+          diasTranscurridos = habiles || 1;
+        } else if (!diasTranscurridos || diasTranscurridos > diasTotales) {
+          diasTranscurridos = diasTotales;
+        }
+
+        vendedoresMetasCache.forEach(v => {
+          if (esVendedor && vendVinculado && !v.vendedor.toLowerCase().includes(vendVinculado.toLowerCase())) {
+            return;
+          }
+
+          bodyHtml += `<tr>
+            <td><b>${escapeHTML(v.vendedor)}</b></td>
+            <td class="num"><b>${fmt(v.metaMensual)}</b></td>`;
+
+          if (v.semanas) {
+            v.semanas.forEach(s => {
+              let badgeClass = s.pct >= 100 ? 'badge-success' : (s.pct >= 50 ? 'badge-warning' : 'badge-danger');
+              bodyHtml += `<td class="center">
+                <div><b>${fmt(s.vendido)}</b></div>
+                <span class="subtext">Meta: ${fmt(s.metaTramo)}</span>
+                <span class="badge-pct ${badgeClass}" style="margin-top:2px;">${s.pct}%</span>
+              </td>`;
+            });
+          }
+
+          let pctTotalClass = v.porcentajeMes >= 100 ? 'badge-success' : (v.porcentajeMes >= 50 ? 'badge-warning' : 'badge-danger');
+          
+          const pctProyectado = calcularPctProyectado(v.vendidoMes, v.metaMensual, diasTranscurridos, diasTotales);
+          let pctProyClass = pctProyectado >= 100 ? 'badge-success' : (pctProyectado >= 80 ? 'badge-warning' : 'badge-danger');
+
+          bodyHtml += `
+            <td class="num"><b>${fmt(v.vendidoMes)}</b></td>
+            <td class="center"><span class="badge-pct ${pctTotalClass}">${v.porcentajeMes}%</span></td>
+            <td class="center"><span class="badge-pct ${pctProyClass}">${pctProyectado}%</span></td>
+          </tr>`;
+        });
+        document.getElementById('bodyMetas').innerHTML = bodyHtml || '<tr><td colspan="10" style="text-align:center; padding:20px;">Sin metas registradas.</td></tr>';
+
+      } catch (e) { console.error(e); }
+    }
+
+    function abrirModalMeta() {
+      const cont = document.getElementById('listaEdicionMetas');
+      let html = '';
+      vendedoresMetasCache.forEach((v, idx) => {
+        html += `
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-size:12px; font-weight:600;">${escapeHTML(v.vendedor)}</span>
+            <input type="number" id="inputMeta_${idx}" value="${v.metaMensual || 0}" style="width:140px;">
           </div>
         `;
       });
-      document.getElementById('gridTarjetasVendedores').innerHTML = htmlCards;
-
-    } catch (err) { console.error(err); }
-  }
-
-  function actualizarGrafico(evolucionData, titulo) {
-    document.getElementById('tituloGrafico').innerText = `Evolución Diaria - ${titulo}`;
-    const ctx = document.getElementById('chartEvolucion')?.getContext('2d');
-    if (!ctx) return;
-
-    const labels = evolucionData.map(d => `Día ${d.dia}`);
-    const valores = evolucionData.map(d => d.monto);
-
-    if (chartEvolucionInstance) chartEvolucionInstance.destroy();
-
-    chartEvolucionInstance = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: titulo,
-          data: valores,
-          borderColor: '#059669',
-          backgroundColor: 'rgba(5, 150, 105, 0.08)',
-          fill: true,
-          tension: 0.3,
-          pointRadius: 3
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } }
-      }
-    });
-  }
-
-  async function filtrarGraficoPorVendedor(nombreVendedor, cardEl) {
-    if (vendedorSeleccionadoActual === nombreVendedor) {
-      restablecerGraficoGeneral();
-      return;
+      cont.innerHTML = html;
+      document.getElementById('modalMetas').style.display = 'flex';
     }
 
-    document.querySelectorAll('.card-vendedor-compact').forEach(c => c.classList.remove('selected'));
-    if (cardEl) cardEl.classList.add('selected');
-    vendedorSeleccionadoActual = nombreVendedor;
+    function cerrarModalMeta() { document.getElementById('modalMetas').style.display = 'none'; }
 
-    try {
-      const res = await fetch(`/api/ventas/consulta-mes?anio=2026&mes=8&vendedorLogueado=${encodeURIComponent(nombreVendedor)}`);
-      const data = await res.json();
-      actualizarGrafico(data.resumen?.evolucionDiaria || [], `Ventas de ${nombreVendedor}`);
-    } catch (e) { console.error(e); }
-  }
+    async function guardarMetas() {
+      const mes = document.getElementById('selectMesMetas').value;
+      const anio = document.getElementById('selectAnioMetas').value;
 
-  function restablecerGraficoGeneral() {
-    vendedorSeleccionadoActual = null;
-    document.querySelectorAll('.card-vendedor-compact').forEach(c => c.classList.remove('selected'));
-    
-    const esVendedor = esRolVendedor(usuarioActual);
-    const vend = esVendedor ? obtenerNombreVendedor(usuarioActual) : '';
-    const tituloGraf = esVendedor ? `Ventas de ${vend || 'Mis Ventas'}` : 'Ventas Generales';
-    actualizarGrafico(datosEvolucionGeneral, tituloGraf);
-  }
+      const payload = vendedoresMetasCache.map((v, idx) => ({
+        vendedor: v.vendedor,
+        meta: Number(document.getElementById(`inputMeta_${idx}`).value) || 0
+      }));
 
-  async function consultarMetas() {
-    const mes = document.getElementById('selectMesMetas').value;
-    const anio = document.getElementById('selectAnioMetas').value;
-
-    try {
-      const res = await fetch(`/api/ventas/metas?anio=${anio}&mes=${mes}`);
-      const data = await res.json();
-      
-      // FILTRAR METAS DE VENDEDORES EXCLUIDOS
-      vendedoresMetasCache = (data.vendedores || []).filter(v => !esExcluido(v.vendedor));
-
-      let trHeader = '<th>Vendedor</th><th class="num">Meta Mensual</th>';
-      (data.tramos || []).forEach(t => {
-        trHeader += `<th class="center">${t.label}<span class="subtext">${t.diasHabiles} días hábiles</span></th>`;
-      });
-      trHeader += '<th class="num">Venta Total</th><th class="center">% Avance Mes</th>';
-      document.getElementById('trHeaderMetas').innerHTML = trHeader;
-
-      let bodyHtml = '';
-      const esVendedor = esRolVendedor(usuarioActual);
-      const vendVinculado = obtenerNombreVendedor(usuarioActual);
-
-      vendedoresMetasCache.forEach(v => {
-        if (esVendedor && vendVinculado && !v.vendedor.toLowerCase().includes(vendVinculado.toLowerCase())) {
-          return;
-        }
-
-        bodyHtml += `<tr>
-          <td><b>${escapeHTML(v.vendedor)}</b></td>
-          <td class="num"><b>${fmt(v.metaMensual)}</b></td>`;
-
-        v.semanas.forEach(s => {
-          let badgeClass = s.pct >= 100 ? 'badge-success' : (s.pct >= 50 ? 'badge-warning' : 'badge-danger');
-          bodyHtml += `<td class="center">
-            <div><b>${fmt(s.vendido)}</b></div>
-            <span class="subtext">Meta: ${fmt(s.metaTramo)}</span>
-            <span class="badge-pct ${badgeClass}" style="margin-top:2px;">${s.pct}%</span>
-          </td>`;
+      try {
+        await fetch('/api/ventas/metas/guardar-masivo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ anio, mes, metas: payload })
         });
 
-        let pctTotalClass = v.porcentajeMes >= 100 ? 'badge-success' : (v.porcentajeMes >= 50 ? 'badge-warning' : 'badge-danger');
-
-        bodyHtml += `
-          <td class="num"><b>${fmt(v.vendidoMes)}</b></td>
-          <td class="center"><span class="badge-pct ${pctTotalClass}">${v.porcentajeMes}%</span></td>
-        </tr>`;
-      });
-      document.getElementById('bodyMetas').innerHTML = bodyHtml;
-
-    } catch (e) { console.error(e); }
-  }
-
-  function abrirModalMeta() {
-    const cont = document.getElementById('listaEdicionMetas');
-    let html = '';
-    vendedoresMetasCache.forEach((v, idx) => {
-      html += `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <span style="font-size:12px; font-weight:600;">${escapeHTML(v.vendedor)}</span>
-          <input type="number" id="inputMeta_${idx}" value="${v.metaMensual}" style="width:140px;">
-        </div>
-      `;
-    });
-    cont.innerHTML = html;
-    document.getElementById('modalMetas').style.display = 'flex';
-  }
-
-  function cerrarModalMeta() { document.getElementById('modalMetas').style.display = 'none'; }
-
-  async function guardarMetas() {
-    const mes = document.getElementById('selectMesMetas').value;
-    const anio = document.getElementById('selectAnioMetas').value;
-
-    const payload = vendedoresMetasCache.map((v, idx) => ({
-      nombre: v.vendedor,
-      meta: Number(document.getElementById(`inputMeta_${idx}`).value) || 0
-    }));
-
-    await fetch('/api/ventas/metas/guardar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ anio, mes, metas: payload })
-    });
-
-    cerrarModalMeta();
-    consultarMetas();
-  }
-
-  async function consultarDetalle() {
-    let vend = document.getElementById('filtroVendedor')?.value || '';
-    if (esRolVendedor(usuarioActual)) {
-      vend = obtenerNombreVendedor(usuarioActual);
+        cerrarModalMeta();
+        consultarMetas();
+      } catch (e) { console.error(e); }
     }
-    const busq = document.getElementById('filtroBuscar')?.value || '';
-    const estadoCompra = document.getElementById('filtroEstadoCompra')?.value || 'TODOS';
 
-    try {
-      const res = await fetch(`/api/ventas/detalle?vendedor=${encodeURIComponent(vend)}&busqueda=${encodeURIComponent(busq)}&anio=2026&mes=8`);
-      const data = await res.json();
-
-      document.getElementById('thMes2').innerText = data.mesesNombres[0];
-      document.getElementById('thMes1').innerText = data.mesesNombres[1];
-      document.getElementById('thMesAct').innerText = data.mesesNombres[2];
-
-      let registros = data.detalle || [];
-
-      if (estadoCompra === 'SIN_COMPRA_AGOSTO') {
-        registros = registros.filter(d => (Number(d.mes_actual) || 0) <= 0);
+    async function consultarDetalle() {
+      let vend = document.getElementById('filtroVendedor')?.value || '';
+      if (esRolVendedor(usuarioActual)) {
+        vend = obtenerNombreVendedor(usuarioActual);
       }
+      const busq = document.getElementById('filtroBuscar')?.value || '';
+      const estadoCompra = document.getElementById('filtroEstadoCompra')?.value || 'TODOS';
 
-      let html = '';
-      registros.forEach(d => {
-        html += `<tr>
-          <td>${escapeHTML(d.cliente)}</td>
-          <td class="num">${fmt(d.mes_2)}</td>
-          <td class="num">${fmt(d.mes_1)}</td>
-          <td class="num"><b>${fmt(d.mes_actual)}</b></td>
-        </tr>`;
-      });
-      document.getElementById('bodyDetalle').innerHTML = html || '<tr><td colspan="4">Sin registros</td></tr>';
-    } catch (e) { console.error(e); }
-  }
+      try {
+        const res = await fetch(`/api/ventas/detalle?vendedor=${encodeURIComponent(vend)}&busqueda=${encodeURIComponent(busq)}&anio=${ANIO_ACTUAL}&mes=${MES_ACTUAL}`);
+        const data = await res.json();
 
-  async function consultarPorProveedor() {
-    let vend = document.getElementById('filtroVendedorProv')?.value || '';
-    if (esRolVendedor(usuarioActual)) {
-      vend = obtenerNombreVendedor(usuarioActual);
-    }
-    const busq = document.getElementById('filtroBuscarProv')?.value || '';
-
-    try {
-      const res = await fetch(`/api/ventas/proveedores?vendedor=${encodeURIComponent(vend)}&busqueda=${encodeURIComponent(busq)}&anio=2026&mes=8`);
-      const data = await res.json();
-
-      document.getElementById('thMesProv2').innerText = data.mesesNombres[0];
-      document.getElementById('thMesProv1').innerText = data.mesesNombres[1];
-      document.getElementById('thMesProvAct').innerText = data.mesesNombres[2];
-
-      let html = '';
-      (data.proveedores || []).forEach(p => {
-        html += `<tr>
-          <td>${escapeHTML(p.proveedor)}</td>
-          <td class="num">${fmt(p.mes_2)}</td>
-          <td class="num">${fmt(p.mes_1)}</td>
-          <td class="num"><b>${fmt(p.mes_actual)}</b></td>
-        </tr>`;
-      });
-      document.getElementById('bodyProveedor').innerHTML = html || '<tr><td colspan="4">Sin registros</td></tr>';
-    } catch (e) { console.error(e); }
-  }
-
-  async function poblarTodosLosSelectsVendedores() {
-    try {
-      const res = await fetch('/api/vendedores/lista-completa');
-      const vendedoresRaw = await res.json();
-      
-      // FILTRAR VENDEDORES EN SELECTS
-      const vendedores = vendedoresRaw.filter(v => !esExcluido(v));
-
-      ['filtroVendedor', 'filtroVendedorProv', 'accVinculo'].forEach(id => {
-        const select = document.getElementById(id);
-        if (select) {
-          let opts = id === 'accVinculo' ? '<option value="">-- Sin Vincular --</option>' : '<option value="">Todos los Vendedores</option>';
-          vendedores.forEach(v => opts += `<option value="${escapeHTML(v)}">${escapeHTML(v)}</option>`);
-          select.innerHTML = opts;
+        if (data.mesesNombres) {
+          document.getElementById('thMes2').innerText = data.mesesNombres[0];
+          document.getElementById('thMes1').innerText = data.mesesNombres[1];
+          document.getElementById('thMesAct').innerText = data.mesesNombres[2];
         }
-      });
-    } catch (e) { console.error(e); }
-  }
 
-  async function abrirModalAccesos() {
-    document.getElementById('modalAccesos').style.display = 'flex';
-    cargarListaUsuarios();
-  }
+        let registros = data.detalle || [];
 
-  function cerrarModalAccesos() { document.getElementById('modalAccesos').style.display = 'none'; }
+        if (estadoCompra === 'SIN_COMPRA_ACTUAL') {
+          registros = registros.filter(d => (Number(d.mes_actual) || 0) <= 0);
+        }
 
-  async function cargarListaUsuarios() {
-    const cont = document.getElementById('listaUsuariosRegistrados');
-    try {
-      const res = await fetch('/api/usuarios');
-      const usuarios = await res.json();
-      let html = '';
-      usuarios.forEach(u => {
-        html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f1f5f9; font-size:11px;">
-          <div><b>${escapeHTML(u.nombre)}</b> <span style="color:#64748b;">(${escapeHTML(u.email)})</span></div>
-          <span class="badge-pct ${u.rol === 'ADMIN' ? 'badge-success' : 'badge-warning'}">${u.rol}</span>
-        </div>`;
-      });
-      cont.innerHTML = html || 'No hay usuarios registrados';
-    } catch (e) { cont.innerHTML = 'Error al cargar usuarios'; }
-  }
-
-  async function guardarUsuario() {
-    const nombre = document.getElementById('accNombre').value.trim();
-    const email = document.getElementById('accEmail').value.trim();
-    const password = document.getElementById('accPass').value.trim();
-    const rol = document.getElementById('accRol').value;
-    const vendedor_vinculado = document.getElementById('accVinculo').value;
-
-    if (!nombre || !email || !password) {
-      alert('⚠️ Por favor completa todos los campos requeridos (Nombre, Email y Contraseña).');
-      return;
+        let html = '';
+        registros.forEach(d => {
+          html += `<tr>
+            <td>${escapeHTML(d.cliente)}</td>
+            <td class="num">${fmt(d.mes_2)}</td>
+            <td class="num">${fmt(d.mes_1)}</td>
+            <td class="num"><b>${fmt(d.mes_actual)}</b></td>
+          </tr>`;
+        });
+        document.getElementById('bodyDetalle').innerHTML = html || '<tr><td colspan="4" style="text-align:center; padding:20px;">Sin registros</td></tr>';
+      } catch (e) { console.error(e); }
     }
 
-    try {
-      const res = await fetch('/api/usuarios/guardar', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre, email, password, rol, vendedor_vinculado })
-      });
-      
-      const data = await res.json();
-      if (data.ok) {
-        alert('✅ Usuario guardado exitosamente');
-        document.getElementById('accNombre').value = '';
-        document.getElementById('accEmail').value = '';
-        document.getElementById('accPass').value = '';
-        document.getElementById('accVinculo').value = '';
-        cargarListaUsuarios();
-      } else {
-        alert('❌ Error al guardar usuario: ' + (data.error || 'Error en el servidor'));
+    async function consultarPorProveedor() {
+      let vend = document.getElementById('filtroVendedorProv')?.value || '';
+      if (esRolVendedor(usuarioActual)) {
+        vend = obtenerNombreVendedor(usuarioActual);
       }
-    } catch (err) {
-      alert('❌ Error de conexión: ' + err.message);
+      const busq = document.getElementById('filtroBuscarProv')?.value || '';
+
+      try {
+        const res = await fetch(`/api/ventas/proveedores?vendedor=${encodeURIComponent(vend)}&busqueda=${encodeURIComponent(busq)}&anio=${ANIO_ACTUAL}&mes=${MES_ACTUAL}`);
+        const data = await res.json();
+
+        if (data.mesesNombres) {
+          document.getElementById('thMesProv2').innerText = data.mesesNombres[0];
+          document.getElementById('thMesProv1').innerText = data.mesesNombres[1];
+          document.getElementById('thMesProvAct').innerText = data.mesesNombres[2];
+        }
+
+        let html = '';
+        (data.proveedores || []).forEach(p => {
+          html += `<tr>
+            <td>${escapeHTML(p.proveedor)}</td>
+            <td class="num">${fmt(p.mes_2)}</td>
+            <td class="num">${fmt(p.mes_1)}</td>
+            <td class="num"><b>${fmt(p.mes_actual)}</b></td>
+          </tr>`;
+        });
+        document.getElementById('bodyProveedor').innerHTML = html || '<tr><td colspan="4" style="text-align:center; padding:20px;">Sin registros</td></tr>';
+      } catch (e) { console.error(e); }
     }
-  }
+
+    async function poblarTodosLosSelectsVendedores() {
+      try {
+        const res = await fetch('/api/vendedores/lista-completa');
+        const vendedoresRaw = await res.json();
+        
+        const vendedores = vendedoresRaw.filter(v => !esExcluido(v));
+
+        ['filtroVendedor', 'filtroVendedorProv', 'accVinculo'].forEach(id => {
+          const select = document.getElementById(id);
+          if (select) {
+            let opts = id === 'accVinculo' ? '<option value="">-- Sin Vincular --</option>' : '<option value="">Todos los Vendedores</option>';
+            vendedores.forEach(v => opts += `<option value="${escapeHTML(v)}">${escapeHTML(v)}</option>`);
+            select.innerHTML = opts;
+          }
+        });
+      } catch (e) { console.error(e); }
+    }
+
+    async function abrirModalAccesos() {
+      document.getElementById('modalAccesos').style.display = 'flex';
+      cargarListaUsuarios();
+    }
+
+    function cerrarModalAccesos() { document.getElementById('modalAccesos').style.display = 'none'; }
+
+    async function cargarListaUsuarios() {
+      const cont = document.getElementById('listaUsuariosRegistrados');
+      try {
+        const res = await fetch('/api/usuarios');
+        const usuarios = await res.json();
+        let html = '';
+        usuarios.forEach(u => {
+          html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f1f5f9; font-size:11px;">
+            <div><b>${escapeHTML(u.nombre)}</b> <span style="color:#64748b;">(${escapeHTML(u.email)})</span></div>
+            <span class="badge-pct ${u.rol === 'ADMIN' ? 'badge-success' : 'badge-warning'}">${escapeHTML(u.rol)}</span>
+          </div>`;
+        });
+        cont.innerHTML = html || 'No hay usuarios registrados';
+      } catch (e) { cont.innerHTML = 'Error al cargar usuarios'; }
+    }
+
+    async function guardarUsuario() {
+      const nombre = document.getElementById('accNombre').value.trim();
+      const email = document.getElementById('accEmail').value.trim();
+      const password = document.getElementById('accPass').value.trim();
+      const rol = document.getElementById('accRol').value;
+      const vendedor_vinculado = document.getElementById('accVinculo').value;
+
+      if (!nombre || !email || !password) {
+        alert('⚠️ Por favor completa todos los campos requeridos (Nombre, Email y Contraseña).');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/usuarios/guardar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, email, password, rol, vendedor_vinculado })
+        });
+        
+        const data = await res.json();
+        if (data.ok || res.ok) {
+          alert('✅ Usuario guardado exitosamente');
+          document.getElementById('accNombre').value = '';
+          document.getElementById('accEmail').value = '';
+          document.getElementById('accPass').value = '';
+          document.getElementById('accVinculo').value = '';
+          cargarListaUsuarios();
+        } else {
+          alert('❌ Error al guardar usuario: ' + (data.error || 'Error en el servidor'));
+        }
+      } catch (err) {
+        alert('❌ Error de conexión: ' + err.message);
+      }
+    }
 </script>
 </body>
 </html>

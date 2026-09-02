@@ -56,12 +56,10 @@ function formatearFecha(fechaStr) {
     let p2 = partesLatinas[1].padStart(2, '0');
     let p3 = partesLatinas[2];
 
-    // Caso YYYY-MM-DD o YYYY/MM/DD
     if (p1.length === 4) {
       return `${p1}-${p2}-${p3.padStart(2, '0')}`;
     }
 
-    // Caso DD-MM-YYYY o DD/MM/YYYY -> Convertir a YYYY-MM-DD
     if (p3.length === 4) {
       return `${p3}-${p2}-${p1}`;
     }
@@ -75,25 +73,10 @@ function formatearFecha(fechaStr) {
 
   return null;
 }
+
 async function ejecutarSincronizacionDrive() {
   console.log(`[${new Date().toLocaleString()}] 🔄 Iniciando sincronización desde Google Drive...`);
   try {
-    const { data: ultimoRegistro, error: errBD } = await supabase
-      .from('Ventas_detalle')
-      .select('fecha')
-      .order('fecha', { ascending: false })
-      .limit(1);
-
-    if (errBD) throw errBD;
-
-    // Fecha límite desde la base de datos (Ej: 2026-08-27)
-    const fechaLimiteStr = (ultimoRegistro && ultimoRegistro.length > 0 && ultimoRegistro[0].fecha)
-      ? ultimoRegistro[0].fecha
-      : '2000-01-01';
-
-    console.log(`📌 Fecha máxima actual en Supabase: ${fechaLimiteStr}`);
-
-    // SOPORTE DE CREDENCIALES
     let auth;
     if (process.env.GOOGLE_CREDENTIALS) {
       const keys = JSON.parse(process.env.GOOGLE_CREDENTIALS);
@@ -109,7 +92,13 @@ async function ejecutarSincronizacionDrive() {
     const sheets = google.sheets({ version: 'v4', auth });
     const spreadsheetId = '1f1TFuHzonDow_W-SZd3qpqJiTW1NKS8TzZ_NxSPhgJo';
 
-    // 1. OBTENER ENCABEZADOS (Fila 1)
+    const sheetInfo = await sheets.spreadsheets.get({
+      spreadsheetId,
+      fields: 'sheets.properties(title,gridProperties/rowCount)'
+    });
+    const detalleSheet = sheetInfo.data.sheets.find(s => s.properties.title === 'Detalle');
+    const totalFilasHoja = detalleSheet ? detalleSheet.properties.gridProperties.rowCount : 200000;
+
     const resEncabezado = await sheets.spreadsheets.values.get({
       spreadsheetId,
       range: 'Detalle!A1:AE1',
@@ -130,88 +119,110 @@ async function ejecutarSincronizacionDrive() {
       return null;
     };
 
-    // 2. OBTENER METADATOS DE LA HOJA
-    const sheetInfo = await sheets.spreadsheets.get({
-      spreadsheetId,
-      fields: 'sheets.properties(title,gridProperties/rowCount)'
-    });
-    const detalleSheet = sheetInfo.data.sheets.find(s => s.properties.title === 'Detalle');
-    const totalFilasHoja = detalleSheet ? detalleSheet.properties.gridProperties.rowCount : 140000;
+    // Carga completa de la BD con el documento para evitar falsos duplicados
+    let registrosExistentesBD = [];
+    let desdeBD = 0;
+    const pasoBD = 1000;
+    let continuarBD = true;
 
-    // 3. LEER LAS ÚLTIMAS 15.000 FILAS
-    const CANTIDAD_FILAS_LEER = 15000;
-    const filaInicio = Math.max(2, totalFilasHoja - CANTIDAD_FILAS_LEER);
-    const range = `Detalle!A${filaInicio}:AE${totalFilasHoja}`;
-
-    console.log(`📊 Leyendo rango: ${range}`);
-    const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-    const filas = response.data.values || [];
-
-    if (filas.length === 0) {
-      console.log('ℹ️ No hay datos para procesar.');
-      return { ok: true, insertados: 0, mensaje: 'Sin filas' };
+    while (continuarBD) {
+      let { data } = await supabase
+        .from('Ventas_detalle')
+        .select('fecha, nombre_cliente, numero_pedido, total, articulo, documento')
+        .range(desdeBD, desdeBD + pasoBD - 1);
+        
+      if (data && data.length > 0) {
+        registrosExistentesBD = registrosExistentesBD.concat(data);
+        desdeBD += pasoBD;
+        if (data.length < pasoBD) continuarBD = false;
+      } else {
+        continuarBD = false;
+      }
     }
 
+    // Identificador único por contenido exacto de la línea
+    const llavesExistentes = new Set(
+      registrosExistentesBD.map(r => 
+        `${r.fecha}_${(r.nombre_cliente||'').toLowerCase()}_${r.numero_pedido||''}_${(r.articulo||'').toLowerCase()}_${r.total}_${r.documento||''}`
+      )
+    );
+
+    const TAMANO_BLOQUE = 30000;
     const registrosNuevos = [];
 
-    for (let i = 0; i < filas.length; i++) {
-      const fila = filas[i];
-      const fechaTexto = getVal(fila, 'fecha');
-      if (!fechaTexto) continue;
+    for (let inicio = 2; inicio <= totalFilasHoja; inicio += TAMANO_BLOQUE) {
+      const fin = Math.min(inicio + TAMANO_BLOQUE - 1, totalFilasHoja);
+      const range = `Detalle!A${inicio}:AE${fin}`;
+      console.log(`📊 Leyendo rango: ${range}`);
 
-      const fechaISO = formatearFecha(fechaTexto);
-      if (!fechaISO) continue;
+      const response = await sheets.spreadsheets.values.get({ spreadsheetId, range });
+      const filas = response.data.values || [];
 
-      const nombreVendedor = (fila[3] !== undefined && fila[3] !== null) ? fila[3].toString().trim() : '';
-      const rutCliente = (fila[4] !== undefined && fila[4] !== null) ? fila[4].toString().trim() : '';
-      const nombreCliente = (fila[5] !== undefined && fila[5] !== null) ? fila[5].toString().trim() : '';
-      const direccionVal = (fila[9] !== undefined && fila[9] !== null) ? fila[9].toString().trim() : (getVal(fila, 'dirección') || getVal(fila, 'direccion'));
+      for (let i = 0; i < filas.length; i++) {
+        const fila = filas[i];
+        const fechaTexto = getVal(fila, 'fecha');
+        if (!fechaTexto) continue;
 
-      const esExcluido = EXCLUIDOS.some(e => nombreVendedor.toLowerCase().includes(e));
+        const fechaISO = formatearFecha(fechaTexto);
+        if (!fechaISO) continue;
 
-      // Comparación directa de cadenas ISO (YYYY-MM-DD) para evitar fallos de huso horario
-      if (fechaISO > fechaLimiteStr && !esExcluido) {
-        const cantidad = parseMonto(getVal(fila, 'cantidad'));
-        const precio = parseMonto(getVal(fila, 'precio'));
-        let total = parseMonto(getVal(fila, 'total'));
+        // Filtro desde junio de 2026
+        const esDesdeJunio2026 = fechaISO >= '2026-06-01';
 
-        if (total === 0 && cantidad > 0 && precio > 0) {
-          total = cantidad * precio;
+        if (esDesdeJunio2026) {
+          const cantidad = parseMonto(getVal(fila, 'cantidad'));
+          const precio = parseMonto(getVal(fila, 'precio'));
+          const total = parseMonto(getVal(fila, 'total'));
+
+          const pedido = getVal(fila, 'pedido');
+          const articulo = getVal(fila, 'artículo') || getVal(fila, 'articulo') || '';
+          const documento = getVal(fila, 'documento') || '';
+          
+          const nombreVendedor = (fila[3] !== undefined && fila[3] !== null) ? fila[3].toString().trim() : '';
+          const rutCliente = (fila[4] !== undefined && fila[4] !== null) ? fila[4].toString().trim() : '';
+          const nombreCliente = (fila[5] !== undefined && fila[5] !== null) ? fila[5].toString().trim() : '';
+          const direccionVal = (fila[9] !== undefined && fila[9] !== null) ? fila[9].toString().trim() : (getVal(fila, 'dirección') || getVal(fila, 'direccion'));
+
+          // Clave única basada exclusivamente en contenido
+          const llaveRegistro = `${fechaISO}_${nombreCliente.toLowerCase()}_${pedido||''}_${articulo.toLowerCase()}_${total}_${documento||''}`;
+
+          if (!llavesExistentes.has(llaveRegistro)) {
+            registrosNuevos.push({
+              movimiento: getVal(fila, 'movimiento'),
+              sector: getVal(fila, 'sector'),
+              vendedor: getVal(fila, 'vendedor'),
+              nombre_vendedor: nombreVendedor,
+              rut: rutCliente,
+              nombre_cliente: nombreCliente,
+              comuna: getVal(fila, 'comuna'),
+              canal: getVal(fila, 'canal'),
+              cod_direccion: getVal(fila, 'cod dirección') || getVal(fila, 'cod direccion'),
+              direccion: direccionVal,
+              fecha: fechaISO,
+              vencimiento: formatearFecha(getVal(fila, 'vencimiento')),
+              condicion_pago: getVal(fila, 'condición pago') || getVal(fila, 'condicion pago'),
+              numero_pedido: pedido,
+              orden_compra: getVal(fila, 'orden compra'),
+              comentarios: getVal(fila, 'comentarios'),
+              usuario_creador: getVal(fila, 'creador'),
+              precio_lista: parseMonto(getVal(fila, 'precio lista')),
+              lista_cliente: getVal(fila, 'lista cliente'),
+              documento: documento,
+              documento_asoc: getVal(fila, 'doc asoc'),
+              comentario_doc: getVal(fila, 'comentario doc'),
+              articulo: articulo,
+              descripcion: getVal(fila, 'descripción') || getVal(fila, 'descripcion'),
+              observacion: getVal(fila, 'observación') || getVal(fila, 'observacion'),
+              proveedor: getVal(fila, 'proveedor'),
+              costo: parseMonto(getVal(fila, 'costo')),
+              grupo: getVal(fila, 'grupo'),
+              cantidad: cantidad,
+              precio: precio,
+              total: total
+            });
+            llavesExistentes.add(llaveRegistro);
+          }
         }
-
-        registrosNuevos.push({
-          movimiento: getVal(fila, 'movimiento'),
-          sector: getVal(fila, 'sector'),
-          vendedor: getVal(fila, 'vendedor'),
-          nombre_vendedor: nombreVendedor,
-          rut: rutCliente,
-          nombre_cliente: nombreCliente,
-          comuna: getVal(fila, 'comuna'),
-          canal: getVal(fila, 'canal'),
-          cod_direccion: getVal(fila, 'cod dirección') || getVal(fila, 'cod direccion'),
-          direccion: direccionVal,
-          fecha: fechaISO,
-          vencimiento: formatearFecha(getVal(fila, 'vencimiento')),
-          condicion_pago: getVal(fila, 'condición pago') || getVal(fila, 'condicion pago'),
-          numero_pedido: getVal(fila, 'pedido'),
-          orden_compra: getVal(fila, 'orden compra'),
-          comentarios: getVal(fila, 'comentarios'),
-          usuario_creador: getVal(fila, 'creador'),
-          precio_lista: parseMonto(getVal(fila, 'precio lista')),
-          lista_cliente: getVal(fila, 'lista cliente'),
-          documento: getVal(fila, 'documento'),
-          documento_asoc: getVal(fila, 'doc asoc'),
-          comentario_doc: getVal(fila, 'comentario doc'),
-          articulo: getVal(fila, 'artículo') || getVal(fila, 'articulo'),
-          descripcion: getVal(fila, 'descripción') || getVal(fila, 'descripcion'),
-          observacion: getVal(fila, 'observación') || getVal(fila, 'observacion'),
-          proveedor: getVal(fila, 'proveedor'),
-          costo: parseMonto(getVal(fila, 'costo')),
-          grupo: getVal(fila, 'grupo'),
-          cantidad: cantidad,
-          precio: precio,
-          total: total
-        });
       }
     }
 
@@ -221,7 +232,9 @@ async function ejecutarSincronizacionDrive() {
 
       for (let i = 0; i < registrosNuevos.length; i += TAMANO_LOTE) {
         const lote = registrosNuevos.slice(i, i + TAMANO_LOTE);
-        const { error: errInsert } = await supabase.from('Ventas_detalle').insert(lote);
+        const { error: errInsert } = await supabase
+          .from('Ventas_detalle')
+          .insert(lote);
 
         if (errInsert) throw errInsert;
 
@@ -243,17 +256,16 @@ async function ejecutarSincronizacionDrive() {
   }
 }
 
-// CRON JOB: ÚNICA FORMA AUTOMÁTICA (Todos los días a las 12:30 PM hora de Chile)
 cron.schedule('30 12 * * *', () => {
   ejecutarSincronizacionDrive();
 }, {
   timezone: "America/Santiago"
 });
 
-// ENDPOINT MANUAL DE SINCRONIZACIÓN (RESPONDE DE INMEDIATO EN SEGUNDO PLANO)
 app.post('/api/ventas/sincronizar-drive', (req, res) => {
-  res.status(202).json({ ok: true, mensaje: 'Sincronización iniciada en segundo plano.' });
-  ejecutarSincronizacionDrive().catch(err => console.error("Error en segundo plano:", err));
+  res.status(200).json({ ok: true, mensaje: 'Sincronización iniciada en segundo plano.' });
+  cacheUltimaActualizacion = 0;
+  ejecutarSincronizacionDrive().catch(err => console.error("Error en sincronización manual:", err));
 });
 
 function getISOWeekNumber(date) {
@@ -361,7 +373,7 @@ function extraerAnioMes(v) {
     const partes = soloFecha.split('/');
     if (partes.length >= 3) {
       if (partes[0].length === 4) {
-        return { anio: parseInt(partes[0], 10), mes: parseInt(partes[1], 10), dia: parseInt(partes[0], 10) };
+        return { anio: parseInt(partes[0], 10), mes: parseInt(partes[1], 10), dia: parseInt(partes[2], 10) };
       }
       return { anio: parseInt(partes[2], 10), mes: parseInt(partes[1], 10), dia: parseInt(partes[0], 10) };
     }
@@ -421,7 +433,7 @@ async function obtenerDatosRpidos(forzarRecarga = false) {
     const paso = 1000;
     let continuar = true;
 
-    while (continuar && desde < 50000) {
+    while (continuar) {
       let { data } = await supabase.from('Ventas_detalle').select('*').range(desde, desde + paso - 1);
       if (data && data.length > 0) {
         todos = todos.concat(data);
@@ -447,10 +459,76 @@ app.get('/api/vendedores/lista-completa', async (req, res) => {
     const vendedoresSet = new Set();
     datos.forEach(v => {
       const nom = extraerVendedor(v, usuariosMap);
-      if (nom && nom !== 'Sin Vendedor') vendedoresSet.add(nom);
+      const esExcluido = EXCLUIDOS.some(e => nom.toLowerCase().includes(e));
+      if (nom && nom !== 'Sin Vendedor' && !esExcluido) {
+        vendedoresSet.add(nom);
+      }
     });
     res.json(Array.from(vendedoresSet).sort((a, b) => a.localeCompare(b)));
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
+app.get('/api/ventas/historico-cierres', async (req, res) => {
+  try {
+    const { anio = 2026, usuarioLogueado, rol } = req.query;
+    const anioNum = parseInt(anio, 10);
+
+    // Obtener las metas y cierres del año seleccionado
+    const { data: metasData, error } = await supabase
+      .from('metas_vendedores')
+      .select('*')
+      .eq('anio', anioNum);
+
+    if (error) throw error;
+
+    const mapaVendedores = {};
+
+    (metasData || []).forEach(m => {
+      const nombre = (m.nombre || '').trim();
+      if (!nombre) return;
+      const key = nombre.toLowerCase();
+
+      if (!mapaVendedores[key]) {
+        mapaVendedores[key] = {
+          vendedor: nombre,
+          meses: Array(12).fill(null).map(() => ({ monto: 0, meta: 0, pct: 0, cerrado: false }))
+        };
+      }
+
+      const mesIndex = m.mes - 1; // 0 a 11
+      if (mesIndex >= 0 && mesIndex < 12) {
+        const meta = Number(m.meta) || 0;
+        const montoCierre = m.cierre_mes !== null && m.cierre_mes !== undefined ? Number(m.cierre_mes) : null;
+        const tieneCierre = montoCierre !== null;
+        const montoFinal = tieneCierre ? montoCierre : 0;
+        const pct = meta > 0 ? Math.round((montoFinal / meta) * 100) : 0;
+
+        mapaVendedores[key].meses[mesIndex] = {
+          monto: montoFinal,
+          meta,
+          pct,
+          cerrado: tieneCierre
+        };
+      }
+    });
+
+    let lista = Object.values(mapaVendedores);
+
+    // Filtro por rol (VENDEDOR solo se ve a sí mismo)
+    if (rol !== 'ADMINISTRADOR' && usuarioLogueado) {
+      const vendFiltro = decodeURIComponent(usuarioLogueado).toLowerCase().trim();
+      lista = lista.filter(item => item.vendedor.toLowerCase().includes(vendFiltro));
+    }
+
+    res.json({
+      anio: anioNum,
+      vendedores: lista.sort((a, b) => a.vendedor.localeCompare(b.vendedor))
+    });
+  } catch (err) {
+    console.error('Error en /historico-cierres:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -488,6 +566,7 @@ app.get('/api/ventas/consulta-mes', async (req, res) => {
     });
 
     const vendedores = Object.keys(mapaVendedores)
+      .filter(nombre => !EXCLUIDOS.some(e => nombre.toLowerCase().includes(e)))
       .map(nombre => {
         const monto = mapaVendedores[nombre];
         const keyMeta = Object.keys(metasMap).find(k => coincidenNombres(k, nombre));
@@ -622,10 +701,31 @@ app.get('/api/ventas/metas', async (req, res) => {
     const estructuraMes = calcularEstructuraMes(anioNum, mesNum);
     const { registros: todasVentas, usuariosMap } = await obtenerDatosRpidos();
 
+    const hoy = new Date();
+    const esMesActual = (hoy.getFullYear() === anioNum && (hoy.getMonth() + 1) === mesNum);
+    const esMesPasado = (hoy.getFullYear() > anioNum || (hoy.getFullYear() === anioNum && (hoy.getMonth() + 1) > mesNum));
+
+    let diasHabilesTranscurridos = 0;
+    const diaCorte = esMesActual ? hoy.getDate() : (esMesPasado ? estructuraMes.totalDiasMes : 0);
+
+    for (let d = 1; d <= diaCorte; d++) {
+      const fechaObj = new Date(anioNum, mesNum - 1, d);
+      const diaSemana = fechaObj.getDay();
+      const esFinDeSemana = (diaSemana === 0 || diaSemana === 6);
+      const esFeriado = FERIADOS_CHILE.some(([m, day]) => Number(m) === mesNum && Number(day) === d);
+
+      if (!esFinDeSemana && !esFeriado) {
+        diasHabilesTranscurridos++;
+      }
+    }
+
     const todosLosVendedoresSet = new Set();
     todasVentas.forEach(v => {
       const nom = extraerVendedor(v, usuariosMap);
-      if (nom && nom !== 'Sin Vendedor') todosLosVendedoresSet.add(nom);
+      const esExcluido = EXCLUIDOS.some(e => nom.toLowerCase().includes(e));
+      if (nom && nom !== 'Sin Vendedor' && !esExcluido) {
+        todosLosVendedoresSet.add(nom);
+      }
     });
 
     const ventas = todasVentas.filter(v => {
@@ -637,34 +737,58 @@ app.get('/api/ventas/metas', async (req, res) => {
 
     const metasMap = {};
     (metasData || []).forEach(m => {
-      if (m.nombre) metasMap[m.nombre.toLowerCase().trim()] = { nombreOriginal: m.nombre, meta: Number(m.meta) || 0 };
+      if (m.nombre) {
+        metasMap[m.nombre.toLowerCase().trim()] = { 
+          nombreOriginal: m.nombre, 
+          meta: Number(m.meta) || 0,
+          cierreMes: m.cierre_mes !== null && m.cierre_mes !== undefined ? Number(m.cierre_mes) : null
+        };
+      }
     });
 
     const acumVendedores = {};
     ventas.forEach(v => {
       const nomOriginal = extraerVendedor(v, usuariosMap);
-      const nomKey = nomOriginal.toLowerCase().trim();
-      const monto = extraerMonto(v);
-      const { dia } = extraerAnioMes(v);
+      const esExcluido = EXCLUIDOS.some(e => nomOriginal.toLowerCase().includes(e));
 
-      if (!acumVendedores[nomKey]) acumVendedores[nomKey] = { nombre: nomOriginal, totalMes: 0, ventasPorDia: {} };
-      acumVendedores[nomKey].totalMes += monto;
-      if (dia) acumVendedores[nomKey].ventasPorDia[dia] = (acumVendedores[nomKey].ventasPorDia[dia] || 0) + monto;
+      if (!esExcluido) {
+        const nomKey = nomOriginal.toLowerCase().trim();
+        const monto = extraerMonto(v);
+        const { dia } = extraerAnioMes(v);
+
+        if (!acumVendedores[nomKey]) acumVendedores[nomKey] = { nombre: nomOriginal, totalMes: 0, ventasPorDia: {} };
+        acumVendedores[nomKey].totalMes += monto;
+        if (dia) acumVendedores[nomKey].ventasPorDia[dia] = (acumVendedores[nomKey].ventasPorDia[dia] || 0) + monto;
+      }
     });
 
     const todasKeysMap = new Map();
     Array.from(todosLosVendedoresSet).forEach(v => todasKeysMap.set(v.toLowerCase().trim(), v));
     Object.keys(metasMap).forEach(k => {
-      if (!todasKeysMap.has(k)) todasKeysMap.set(k, metasMap[k].nombreOriginal);
+      if (!todasKeysMap.has(k) && !EXCLUIDOS.some(e => k.includes(e))) {
+        todasKeysMap.set(k, metasMap[k].nombreOriginal);
+      }
     });
 
     const resultado = Array.from(todasKeysMap.entries()).map(([key, nombreReal]) => {
       const vData = acumVendedores[key] || { nombre: nombreReal, totalMes: 0, ventasPorDia: {} };
-      const mData = metasMap[key] || { nombreOriginal: nombreReal, meta: 0 };
+      const mData = metasMap[key] || { nombreOriginal: nombreReal, meta: 0, cierreMes: null };
 
       const metaMensual = Math.round(mData.meta);
       const totalHabiles = estructuraMes.totalDiasHabilesMes;
       const metaDiaria = totalHabiles > 0 ? (metaMensual / totalHabiles) : 0;
+      const vendidoMes = Math.round(vData.totalMes);
+
+      let porcentajeProyeccion = 0;
+      if (metaMensual > 0) {
+        if (diasHabilesTranscurridos > 0) {
+          const ventaPromedioDiaria = vendidoMes / diasHabilesTranscurridos;
+          const ventaProyectadaTotal = ventaPromedioDiaria * totalHabiles;
+          porcentajeProyeccion = Math.round((ventaProyectadaTotal / metaMensual) * 100);
+        } else {
+          porcentajeProyeccion = 0;
+        }
+      }
 
       const semanasCalculadas = estructuraMes.tramos.map(t => {
         let vendidoTramo = 0;
@@ -683,8 +807,10 @@ app.get('/api/ventas/metas', async (req, res) => {
       return {
         vendedor: mData.nombreOriginal || vData.nombre || nombreReal,
         metaMensual,
-        vendidoMes: Math.round(vData.totalMes),
-        porcentajeMes: metaMensual > 0 ? Math.round((vData.totalMes / metaMensual) * 100) : 0,
+        vendidoMes,
+        cierreMes: mData.cierreMes,
+        porcentajeMes: metaMensual > 0 ? Math.round((vendidoMes / metaMensual) * 100) : 0,
+        porcentajeProyeccion,
         semanas: semanasCalculadas
       };
     }).sort((a, b) => a.vendedor.localeCompare(b.vendedor));
@@ -712,6 +838,53 @@ app.post('/api/ventas/metas/guardar', async (req, res) => {
   }
 });
 
+// NUEVO ENDPOINT PARA REALIZAR EL CIERRE DE MES
+app.post('/api/ventas/metas/cerrar-mes', async (req, res) => {
+  try {
+    const { anio, mes } = req.body;
+    const mesNum = Number(mes);
+    const anioNum = Number(anio);
+
+    const { registros: todasVentas, usuariosMap } = await obtenerDatosRpidos(true);
+
+    const ventasMes = todasVentas.filter(v => {
+      const { anio: aVenta, mes: mVenta } = extraerAnioMes(v);
+      return aVenta === anioNum && mVenta === mesNum;
+    });
+
+    const acumVendedores = {};
+    ventasMes.forEach(v => {
+      const nomOriginal = extraerVendedor(v, usuariosMap);
+      if (!EXCLUIDOS.some(e => nomOriginal.toLowerCase().includes(e))) {
+        const nomKey = nomOriginal.toLowerCase().trim();
+        acumVendedores[nomKey] = (acumVendedores[nomKey] || 0) + extraerMonto(v);
+      }
+    });
+
+    const { data: metasData, error: errMetas } = await supabase
+      .from('metas_vendedores')
+      .select('*')
+      .eq('anio', anioNum)
+      .eq('mes', mesNum);
+
+    if (errMetas) throw errMetas;
+
+    for (const record of (metasData || [])) {
+      const key = (record.nombre || '').toLowerCase().trim();
+      const montoTotalAlCierre = acumVendedores[key] !== undefined ? Math.round(acumVendedores[key]) : 0;
+
+      await supabase
+        .from('metas_vendedores')
+        .update({ cierre_mes: montoTotalAlCierre })
+        .eq('id', record.id);
+    }
+
+    res.json({ ok: true, mensaje: `Cierre del mes ${mesNum}/${anioNum} guardado con éxito.` });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 app.get('/api/usuarios', async (req, res) => {
   try {
     const { data, error } = await supabase.from('usuarios').select('*');
@@ -734,4 +907,4 @@ app.post('/api/usuarios/guardar', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀 Servidor optimizado ejecutándose en http://localhost:${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Servidor listo y ejecutándose en http://localhost:${PORT}`));
