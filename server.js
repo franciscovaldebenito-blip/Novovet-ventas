@@ -824,14 +824,46 @@ app.get('/api/ventas/metas', async (req, res) => {
 app.post('/api/ventas/metas/guardar', async (req, res) => {
   try {
     const { anio, mes, metas } = req.body;
+    const anioNum = Number(anio);
+    const mesNum = Number(mes);
+
     for (const m of metas) {
+      const metaNum = Number(m.meta);
+
+      // 1. Guardar/Actualizar en la tabla principal de metas
       await supabase.from('metas_vendedores').upsert({
-        anio: Number(anio),
-        mes: Number(mes),
+        anio: anioNum,
+        mes: mesNum,
         nombre: m.nombre,
-        meta: Number(m.meta)
+        meta: metaNum
       }, { onConflict: 'anio,mes,nombre' });
+
+      // 2. Buscar si existe un cierre previo registrado para este vendedor/año/mes
+      const { data: cierreExistente } = await supabase
+        .from('historico_cierres')
+        .select('monto')
+        .eq('anio', anioNum)
+        .eq('mes', mesNum)
+        .eq('vendedor', m.nombre)
+        .maybeSingle();
+
+      // 3. Si el mes ya estaba cerrado, recalcular y actualizar el histórico
+      if (cierreExistente) {
+        const monto = cierreExistente.monto || 0;
+        const nuevoPct = metaNum > 0 ? Math.round((monto / metaNum) * 100) : 0;
+
+        await supabase
+          .from('historico_cierres')
+          .update({
+            meta: metaNum,
+            pct: nuevoPct
+          })
+          .eq('anio', anioNum)
+          .eq('mes', mesNum)
+          .eq('vendedor', m.nombre);
+      }
     }
+
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

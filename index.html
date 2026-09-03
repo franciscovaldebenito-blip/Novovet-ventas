@@ -819,7 +819,9 @@
         (data.tramos || []).forEach(t => {
           trHeader += `<th class="center">${escapeHTML(t.label)}<span class="subtext">${t.diasHabiles} días hábiles</span></th>`;
         });
-        trHeader += '<th class="num">Venta Total</th><th class="center">% Avance Mes</th><th class="center">% Proyección</th>';
+        
+        // Se agrega la columna 'Prom. Diario' después de 'Venta Total'
+        trHeader += '<th class="num">Venta Total</th><th class="num">Prom. Diario</th><th class="center">% Avance Mes</th><th class="center">% Proyección</th>';
         document.getElementById('trHeaderMetas').innerHTML = trHeader;
 
         let bodyHtml = '';
@@ -867,13 +869,17 @@
           const pctProyectado = calcularPctProyectado(v.vendidoMes, v.metaMensual, diasTranscurridos, diasTotales);
           let pctProyClass = pctProyectado >= 100 ? 'badge-success' : (pctProyectado >= 80 ? 'badge-warning' : 'badge-danger');
 
+          // Cálculo del promedio diario basado en los días hábiles transcurridos
+          const promDiario = diasTranscurridos > 0 ? Math.round((v.vendidoMes || 0) / diasTranscurridos) : 0;
+
           bodyHtml += `
             <td class="num"><b>${fmt(v.vendidoMes)}</b></td>
+            <td class="num" style="color:#0284c7;"><b>${fmt(promDiario)}</b><span class="subtext">/día</span></td>
             <td class="center"><span class="badge-pct ${pctTotalClass}">${v.porcentajeMes}%</span></td>
             <td class="center"><span class="badge-pct ${pctProyClass}">${pctProyectado}%</span></td>
           </tr>`;
         });
-        document.getElementById('bodyMetas').innerHTML = bodyHtml || '<tr><td colspan="10" style="text-align:center; padding:20px;">Sin metas registradas.</td></tr>';
+        document.getElementById('bodyMetas').innerHTML = bodyHtml || '<tr><td colspan="11" style="text-align:center; padding:20px;">Sin metas registradas.</td></tr>';
 
       } catch (e) { console.error(e); }
     }
