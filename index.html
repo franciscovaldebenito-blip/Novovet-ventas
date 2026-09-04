@@ -1031,39 +1031,44 @@
     }
 
     async function guardarUsuario() {
-      const nombre = document.getElementById('accNombre').value.trim();
-      const email = document.getElementById('accEmail').value.trim();
-      const password = document.getElementById('accPass').value.trim();
-      const rol = document.getElementById('accRol').value;
-      const vendedor_vinculado = document.getElementById('accVinculo').value;
+  const nombre = document.getElementById('accNombre').value.trim();
+  const email = document.getElementById('accEmail').value.trim();
+  const password = document.getElementById('accPass').value.trim();
+  const rolRaw = document.getElementById('accRol').value;
+  const vendedor_vinculado = document.getElementById('accVinculo').value;
 
-      if (!nombre || !email || !password) {
-        alert('⚠️ Por favor completa todos los campos requeridos (Nombre, Email y Contraseña).');
-        return;
-      }
+  // Limpiar el valor del rol para asegurar que envíe "ADMINISTRADOR" o "VENDEDOR"
+  let rol = rolRaw ? rolRaw.replace(/Rol:/i, '').trim().toUpperCase() : 'VENDEDOR';
+  if (rol.includes('ADMIN')) rol = 'ADMINISTRADOR';
 
-      try {
-        const res = await fetch('/api/usuarios/guardar', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nombre, email, password, rol, vendedor_vinculado })
-        });
-        
-        const data = await res.json();
-        if (data.ok || res.ok) {
-          alert('✅ Usuario guardado exitosamente');
-          document.getElementById('accNombre').value = '';
-          document.getElementById('accEmail').value = '';
-          document.getElementById('accPass').value = '';
-          document.getElementById('accVinculo').value = '';
-          cargarListaUsuarios();
-        } else {
-          alert('❌ Error al guardar usuario: ' + (data.error || 'Error en el servidor'));
-        }
-      } catch (err) {
-        alert('❌ Error de conexión: ' + err.message);
-      }
+  if (!nombre || !email || !password) {
+    alert('⚠️ Por favor completa todos los campos requeridos (Nombre, Email y Contraseña).');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/usuarios/guardar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre, email, password, rol, vendedor_vinculado })
+    });
+    
+    const data = await res.json();
+    if (data.ok && res.ok) {
+      alert('✅ Usuario guardado exitosamente');
+      document.getElementById('accNombre').value = '';
+      document.getElementById('accEmail').value = '';
+      document.getElementById('accPass').value = '';
+      document.getElementById('accVinculo').value = '';
+      cargarListaUsuarios();
+    } else {
+      alert('❌ Error al guardar usuario: ' + (data.error || 'Error en el servidor'));
     }
+  } catch (err) {
+    alert('❌ Error de conexión: ' + err.message);
+  }
+}
+
 </script>
 </body>
 </html>

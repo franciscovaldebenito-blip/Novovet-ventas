@@ -930,7 +930,23 @@ app.get('/api/usuarios', async (req, res) => {
 app.post('/api/usuarios/guardar', async (req, res) => {
   try {
     const { nombre, email, password, rol, vendedor_vinculado } = req.body;
-    const { error } = await supabase.from('usuarios').insert([{ nombre, email, password, rol, vendedor_vinculado }]);
+
+    // Normalizar el rol para cumplir con la restricción 'usuarios_rol_check' de la BD
+    let rolLimpio = (rol || '').toUpperCase();
+    if (rolLimpio.includes('ADMIN')) {
+      rolLimpio = 'ADMINISTRADOR'; // O 'ADMIN' según esté definido en el check de tu BD
+    } else if (rolLimpio.includes('VEND')) {
+      rolLimpio = 'VENDEDOR';
+    }
+
+    const { error } = await supabase.from('usuarios').insert([{ 
+      nombre, 
+      email, 
+      password, 
+      rol: rolLimpio, 
+      vendedor_vinculado 
+    }]);
+
     if (error) throw error;
     res.json({ ok: true });
   } catch (err) {
