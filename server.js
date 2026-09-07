@@ -719,31 +719,38 @@ app.get('/api/ventas/metas', async (req, res) => {
       }
     }
 
-    const todosLosVendedoresSet = new Set();
-    todasVentas.forEach(v => {
-      const nom = extraerVendedor(v, usuariosMap);
-      const esExcluido = EXCLUIDOS.some(e => nom.toLowerCase().includes(e));
-      if (nom && nom !== 'Sin Vendedor' && !esExcluido) {
-        todosLosVendedoresSet.add(nom);
-      }
-    });
-
-    const ventas = todasVentas.filter(v => {
-      const { anio: aVenta, mes: mVenta } = extraerAnioMes(v);
-      return aVenta === anioNum && mVenta === mesNum;
-    });
-
+    // 1. Cargar las metas del mes
     const { data: metasData } = await supabase.from('metas_vendedores').select('*').eq('anio', anioNum).eq('mes', mesNum);
 
     const metasMap = {};
     (metasData || []).forEach(m => {
       if (m.nombre) {
-        metasMap[m.nombre.toLowerCase().trim()] = { 
-          nombreOriginal: m.nombre, 
+        const key = m.nombre.toLowerCase().trim().replace(/\s+/g, ' ');
+        metasMap[key] = { 
+          nombreOriginal: m.nombre.trim(), 
           meta: Number(m.meta) || 0,
           cierreMes: m.cierre_mes !== null && m.cierre_mes !== undefined ? Number(m.cierre_mes) : null
         };
       }
+    });
+
+    // Función aux para encontrar la clave coincidente en metasMap aunque varíe un apellido o mayúscula
+    const buscarClaveMeta = (nombre) => {
+      if (!nombre) return null;
+      const nomClean = nombre.toLowerCase().trim().replace(/\s+/g, ' ');
+      
+      // Coincidencia exacta
+      if (metasMap[nomClean]) return nomClean;
+
+      // Coincidencia parcial (ej: "paola loncomilla" coincide con "paola loncomilla lon")
+      const clavesMeta = Object.keys(metasMap);
+      return clavesMeta.find(k => k.includes(nomClean) || nomClean.includes(k)) || nomClean;
+    };
+
+    // 2. Acumular las ventas asociándolas a su clave correspondiente de meta
+    const ventas = todasVentas.filter(v => {
+      const { anio: aVenta, mes: mVenta } = extraerAnioMes(v);
+      return aVenta === anioNum && mVenta === mesNum;
     });
 
     const acumVendedores = {};
@@ -751,25 +758,37 @@ app.get('/api/ventas/metas', async (req, res) => {
       const nomOriginal = extraerVendedor(v, usuariosMap);
       const esExcluido = EXCLUIDOS.some(e => nomOriginal.toLowerCase().includes(e));
 
-      if (!esExcluido) {
-        const nomKey = nomOriginal.toLowerCase().trim();
+      if (!esExcluido && nomOriginal && nomOriginal !== 'Sin Vendedor') {
+        const nomKey = buscarClaveMeta(nomOriginal);
         const monto = extraerMonto(v);
         const { dia } = extraerAnioMes(v);
 
-        if (!acumVendedores[nomKey]) acumVendedores[nomKey] = { nombre: nomOriginal, totalMes: 0, ventasPorDia: {} };
+        if (!acumVendedores[nomKey]) {
+          acumVendedores[nomKey] = { nombre: nomOriginal, totalMes: 0, ventasPorDia: {} };
+        }
         acumVendedores[nomKey].totalMes += monto;
         if (dia) acumVendedores[nomKey].ventasPorDia[dia] = (acumVendedores[nomKey].ventasPorDia[dia] || 0) + monto;
       }
     });
 
+    // 3. Crear el conjunto unificado de claves (Metas + Vendedores con ventas)
     const todasKeysMap = new Map();
-    Array.from(todosLosVendedoresSet).forEach(v => todasKeysMap.set(v.toLowerCase().trim(), v));
+    
+    // Primero agregar desde las metas (que son los nombres oficiales del mes)
     Object.keys(metasMap).forEach(k => {
-      if (!todasKeysMap.has(k) && !EXCLUIDOS.some(e => k.includes(e))) {
+      if (!EXCLUIDOS.some(e => k.includes(e))) {
         todasKeysMap.set(k, metasMap[k].nombreOriginal);
       }
     });
 
+    // Luego agregar vendedores de ventas solo si no estaban mapeados previamente
+    Object.keys(acumVendedores).forEach(k => {
+      if (!todasKeysMap.has(k) && !EXCLUIDOS.some(e => k.includes(e))) {
+        todasKeysMap.set(k, acumVendedores[k].nombre);
+      }
+    });
+
+    // 4. Armar el resultado final consolidado
     const resultado = Array.from(todasKeysMap.entries()).map(([key, nombreReal]) => {
       const vData = acumVendedores[key] || { nombre: nombreReal, totalMes: 0, ventasPorDia: {} };
       const mData = metasMap[key] || { nombreOriginal: nombreReal, meta: 0, cierreMes: null };
