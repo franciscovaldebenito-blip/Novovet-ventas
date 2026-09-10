@@ -806,83 +806,107 @@
     }
 
     async function consultarMetas() {
-      const mesSelect = Number(document.getElementById('selectMesMetas').value);
-      const anioSelect = Number(document.getElementById('selectAnioMetas').value);
+  const mesSelect = Number(document.getElementById('selectMesMetas').value);
+  const anioSelect = Number(document.getElementById('selectAnioMetas').value);
 
-      try {
-        const res = await fetch(`/api/ventas/metas?anio=${anioSelect}&mes=${mesSelect}`);
-        const data = await res.json();
-        
-        vendedoresMetasCache = (data.vendedores || []).filter(v => !esExcluido(v.vendedor));
+  try {
+    const res = await fetch(`/api/ventas/metas?anio=${anioSelect}&mes=${mesSelect}`);
+    const data = await res.json();
+    
+    // 1. Obtener la lista base excluyendo roles descartados
+    const todosVendedores = (data.vendedores || []).filter(v => !esExcluido(v.vendedor));
 
-        let trHeader = '<th>Vendedor</th><th class="num">Meta Mensual</th>';
-        (data.tramos || []).forEach(t => {
-          trHeader += `<th class="center">${escapeHTML(t.label)}<span class="subtext">${t.diasHabiles} días hábiles</span></th>`;
-        });
-        
-        // Se agrega la columna 'Prom. Diario' después de 'Venta Total'
-        trHeader += '<th class="num">Venta Total</th><th class="num">Prom. Diario</th><th class="center">% Avance Mes</th><th class="center">% Proyección</th>';
-        document.getElementById('trHeaderMetas').innerHTML = trHeader;
+    // 2. FILTRAR PRIMERO SEGÚN EL ROL DEL USUARIO
+    const esVendedor = esRolVendedor(usuarioActual);
+    const vendVinculado = obtenerNombreVendedor(usuarioActual);
 
-        let bodyHtml = '';
-        const esVendedor = esRolVendedor(usuarioActual);
-        const vendVinculado = obtenerNombreVendedor(usuarioActual);
-        
-        const diasTotales = data.diasHabilesTotales || 21;
-        let diasTranscurridos = data.diasHabilesTranscurridos;
+    vendedoresMetasCache = todosVendedores.filter(v => {
+      if (esVendedor && vendVinculado) {
+        return v.vendedor.toLowerCase().includes(vendVinculado.toLowerCase());
+      }
+      return true;
+    });
 
-        const hoy = new Date();
-        if (hoy.getFullYear() === anioSelect && (hoy.getMonth() + 1) === mesSelect) {
-          let habiles = 0;
-          for (let d = 1; d <= hoy.getDate(); d++) {
-            const fecha = new Date(anioSelect, mesSelect - 1, d);
-            const diaSem = fecha.getDay();
-            if (diaSem !== 0 && diaSem !== 6) habiles++;
-          }
-          diasTranscurridos = habiles || 1;
-        } else if (!diasTranscurridos || diasTranscurridos > diasTotales) {
-          diasTranscurridos = diasTotales;
-        }
+    // 3. CALCULAMOS EL TOTAL DE CADA SEMANA SOLO SOBRE LOS VENDEDORES VISIBLES
+    const tramos = data.tramos || [];
+    const totalesSemanales = tramos.map((_, idx) => {
+      return vendedoresMetasCache.reduce((acc, v) => {
+        const ventaSemana = (v.semanas && v.semanas[idx]) ? (v.semanas[idx].vendido || 0) : 0;
+        return acc + ventaSemana;
+      }, 0);
+    });
 
-        vendedoresMetasCache.forEach(v => {
-          if (esVendedor && vendVinculado && !v.vendedor.toLowerCase().includes(vendVinculado.toLowerCase())) {
-            return;
-          }
+    // 4. CONSTRUIMOS EL ENCABEZADO CON EL TOTAL CORRESPONDIENTE AL ROL
+    let trHeader = '<th>Vendedor</th><th class="num">Meta Mensual</th>';
+    tramos.forEach((t, idx) => {
+      const totalSemana = totalesSemanales[idx] || 0;
+      trHeader += `<th class="center">
+        ${escapeHTML(t.label)}
+        <span class="subtext">${t.diasHabiles} días hábiles</span>
+        <div style="margin-top: 3px; font-weight: bold; color: #1e3a8a; font-size: 0.85rem;">
+          ${fmt(totalSemana)}
+        </div>
+      </th>`;
+    });
+    
+    // Se agrega la columna 'Prom. Diario' después de 'Venta Total'
+    trHeader += '<th class="num">Venta Total</th><th class="num">Prom. Diario</th><th class="center">% Avance Mes</th><th class="center">% Proyección</th>';
+    document.getElementById('trHeaderMetas').innerHTML = trHeader;
 
-          bodyHtml += `<tr>
-            <td><b>${escapeHTML(v.vendedor)}</b></td>
-            <td class="num"><b>${fmt(v.metaMensual)}</b></td>`;
+    let bodyHtml = '';
+    
+    const diasTotales = data.diasHabilesTotales || 21;
+    let diasTranscurridos = data.diasHabilesTranscurridos;
 
-          if (v.semanas) {
-            v.semanas.forEach(s => {
-              let badgeClass = s.pct >= 100 ? 'badge-success' : (s.pct >= 50 ? 'badge-warning' : 'badge-danger');
-              bodyHtml += `<td class="center">
-                <div><b>${fmt(s.vendido)}</b></div>
-                <span class="subtext">Meta: ${fmt(s.metaTramo)}</span>
-                <span class="badge-pct ${badgeClass}" style="margin-top:2px;">${s.pct}%</span>
-              </td>`;
-            });
-          }
-
-          let pctTotalClass = v.porcentajeMes >= 100 ? 'badge-success' : (v.porcentajeMes >= 50 ? 'badge-warning' : 'badge-danger');
-          
-          const pctProyectado = calcularPctProyectado(v.vendidoMes, v.metaMensual, diasTranscurridos, diasTotales);
-          let pctProyClass = pctProyectado >= 100 ? 'badge-success' : (pctProyectado >= 80 ? 'badge-warning' : 'badge-danger');
-
-          // Cálculo del promedio diario basado en los días hábiles transcurridos
-          const promDiario = diasTranscurridos > 0 ? Math.round((v.vendidoMes || 0) / diasTranscurridos) : 0;
-
-          bodyHtml += `
-            <td class="num"><b>${fmt(v.vendidoMes)}</b></td>
-            <td class="num" style="color:#0284c7;"><b>${fmt(promDiario)}</b><span class="subtext">/día</span></td>
-            <td class="center"><span class="badge-pct ${pctTotalClass}">${v.porcentajeMes}%</span></td>
-            <td class="center"><span class="badge-pct ${pctProyClass}">${pctProyectado}%</span></td>
-          </tr>`;
-        });
-        document.getElementById('bodyMetas').innerHTML = bodyHtml || '<tr><td colspan="11" style="text-align:center; padding:20px;">Sin metas registradas.</td></tr>';
-
-      } catch (e) { console.error(e); }
+    const hoy = new Date();
+    if (hoy.getFullYear() === anioSelect && (hoy.getMonth() + 1) === mesSelect) {
+      let habiles = 0;
+      for (let d = 1; d <= hoy.getDate(); d++) {
+        const fecha = new Date(anioSelect, mesSelect - 1, d);
+        const diaSem = fecha.getDay();
+        if (diaSem !== 0 && diaSem !== 6) habiles++;
+      }
+      diasTranscurridos = habiles || 1;
+    } else if (!diasTranscurridos || diasTranscurridos > diasTotales) {
+      diasTranscurridos = diasTotales;
     }
+
+    vendedoresMetasCache.forEach(v => {
+      bodyHtml += `<tr>
+        <td><b>${escapeHTML(v.vendedor)}</b></td>
+        <td class="num"><b>${fmt(v.metaMensual)}</b></td>`;
+
+      if (v.semanas) {
+        v.semanas.forEach(s => {
+          let badgeClass = s.pct >= 100 ? 'badge-success' : (s.pct >= 50 ? 'badge-warning' : 'badge-danger');
+          bodyHtml += `<td class="center">
+            <div><b>${fmt(s.vendido)}</b></div>
+            <span class="subtext">Meta: ${fmt(s.metaTramo)}</span>
+            <span class="badge-pct ${badgeClass}" style="margin-top:2px;">${s.pct}%</span>
+          </td>`;
+        });
+      }
+
+      let pctTotalClass = v.porcentajeMes >= 100 ? 'badge-success' : (v.porcentajeMes >= 50 ? 'badge-warning' : 'badge-danger');
+      
+      const pctProyectado = calcularPctProyectado(v.vendidoMes, v.metaMensual, diasTranscurridos, diasTotales);
+      let pctProyClass = pctProyectado >= 100 ? 'badge-success' : (pctProyectado >= 80 ? 'badge-warning' : 'badge-danger');
+
+      // Cálculo del promedio diario basado en los días hábiles transcurridos
+      const promDiario = diasTranscurridos > 0 ? Math.round((v.vendidoMes || 0) / diasTranscurridos) : 0;
+
+      bodyHtml += `
+        <td class="num"><b>${fmt(v.vendidoMes)}</b></td>
+        <td class="num" style="color:#0284c7;"><b>${fmt(promDiario)}</b><span class="subtext">/día</span></td>
+        <td class="center"><span class="badge-pct ${pctTotalClass}">${v.porcentajeMes}%</span></td>
+        <td class="center"><span class="badge-pct ${pctProyClass}">${pctProyectado}%</span></td>
+      </tr>`;
+    });
+    document.getElementById('bodyMetas').innerHTML = bodyHtml || '<tr><td colspan="11" style="text-align:center; padding:20px;">Sin metas registradas.</td></tr>';
+
+  } catch (e) { console.error(e); }
+}
+
 
     function abrirModalMeta() {
       const cont = document.getElementById('listaEdicionMetas');
