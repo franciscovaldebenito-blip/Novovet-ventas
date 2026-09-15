@@ -133,14 +133,13 @@
         <span id="txtRol">ROL: ADMINISTRADOR</span>
       </div>
 
-    <nav>
-  <button class="nav-btn active" type="button" onclick="cambiarPestana('resumen', this)">RESUMEN</button>
-  <button class="nav-btn" type="button" onclick="cambiarPestana('metas', this)">METAS</button>
-  <button class="nav-btn" type="button" onclick="cambiarPestana('detalle', this)">VENTA DETALLE</button>
-  <button class="nav-btn" type="button" onclick="cambiarPestana('proveedores', this)">PROVEEDORES</button>
-  <!-- BOTÓN DE CIERRES CORREGIDO -->
-  <button class="nav-btn" type="button" onclick="cambiarPestana('cierres', this)">CIERRES</button>
-</nav>
+      <nav>
+        <button class="nav-btn active" type="button" onclick="cambiarPestana('resumen', this)">RESUMEN</button>
+        <button class="nav-btn" type="button" onclick="cambiarPestana('metas', this)">METAS</button>
+        <button class="nav-btn" type="button" onclick="cambiarPestana('detalle', this)">VENTA DETALLE</button>
+        <button class="nav-btn" type="button" onclick="cambiarPestana('proveedores', this)">PROVEEDORES</button>
+        <button class="nav-btn" type="button" onclick="cambiarPestana('cierres', this)">CIERRES</button>
+      </nav>
 
       <div class="actions">
         <button class="btn-action" type="button" id="btnAccesos" onclick="abrirModalAccesos()">Accesos</button>
@@ -152,35 +151,35 @@
 
     <main>
 
-<!-- PESTAÑA HISTÓRICO CIERRES -->
-<section id="tab-cierres" class="tab-content" style="display:none;">
-  <div class="filter-bar">
-    <div style="font-weight:700; font-size:14px; color:#334155;">Histórico de Cierres Mensuales</div>
-    <div class="filter-group" style="margin-left:auto;">
-      <label>AÑO</label>
-      <select id="selectAnioCierres" onchange="cargarHistoricoCierres()">
-        <option value="2026" selected>2026</option>
-        <option value="2025">2025</option>
-      </select>
-    </div>
-  </div>
+      <!-- PESTAÑA HISTÓRICO CIERRES -->
+      <section id="tab-cierres" class="tab-content" style="display:none;">
+        <div class="filter-bar">
+          <div style="font-weight:700; font-size:14px; color:#334155;">Histórico de Cierres Mensuales</div>
+          <div class="filter-group" style="margin-left:auto;">
+            <label>AÑO</label>
+            <select id="selectAnioCierres" onchange="cargarHistoricoCierres()">
+              <option value="2026" selected>2026</option>
+              <option value="2025">2025</option>
+            </select>
+          </div>
+        </div>
 
-  <div style="overflow-x:auto; background:#fff; border-radius:8px; border:1px solid #e2e8f0; margin-top:15px;">
-    <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
-      <thead>
-        <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
-          <th style="padding:10px; text-align:left;">Vendedor</th>
-          <th>Ene</th><th>Feb</th><th>Mar</th><th>Abr</th>
-          <th>May</th><th>Jun</th><th>Jul</th><th>Ago</th>
-          <th>Sep</th><th>Oct</th><th>Nov</th><th>Dic</th>
-        </tr>
-      </thead>
-      <tbody id="tbodyCierres">
-        <!-- Se llena dinámicamente -->
-      </tbody>
-    </table>
-  </div>
-</section>
+        <div style="overflow-x:auto; background:#fff; border-radius:8px; border:1px solid #e2e8f0; margin-top:15px;">
+          <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:center;">
+            <thead>
+              <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                <th style="padding:10px; text-align:left;">Vendedor</th>
+                <th>Ene</th><th>Feb</th><th>Mar</th><th>Abr</th>
+                <th>May</th><th>Jun</th><th>Jul</th><th>Ago</th>
+                <th>Sep</th><th>Oct</th><th>Nov</th><th>Dic</th>
+              </tr>
+            </thead>
+            <tbody id="tbodyCierres">
+              <!-- Se llena dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+      </section>
 
       <!-- 1. RESUMEN -->
       <section id="tab-resumen" class="tab-content active">
@@ -215,11 +214,19 @@
         </div>
       </section>
 
-    <!-- 2. METAS -->
+      <!-- 2. METAS -->
       <section id="tab-metas" class="tab-content">
         <div class="filter-bar">
           <div style="font-weight:700; font-size:14px; color:#334155;">Cumplimiento de Metas</div>
+          
           <div class="filter-group" style="margin-left:auto;">
+            <label>VENDEDOR</label>
+            <select id="selectVendedorMetas" onchange="consultarMetas()">
+              <option value="TODOS">-- Todos los Vendedores --</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
             <label>MES</label>
             <select id="selectMesMetas" onchange="consultarMetas()"></select>
           </div>
@@ -228,10 +235,10 @@
             <select id="selectAnioMetas" onchange="consultarMetas()"></select>
           </div>
 
-          <!-- BOTÓN AGREGADO PARA CERRAR MES -->
+          <!-- BOTÓN PARA CERRAR MES -->
           <button class="btn-action" type="button" style="background:#e67e22; color:#fff; border:none;" id="btnCerrarMes" onclick="cerrarMesActual()">🔒 Cerrar Mes</button>
 
-          <!-- BOTÓN EXISTENTE -->
+          <!-- BOTÓN ASIGNAR META -->
           <button class="btn-action" type="button" style="background:#0284c7; color:#fff; border:none;" id="btnAsignarMeta" onclick="abrirModalMeta()">+ Asignar Meta</button>
         </div>
 
@@ -347,7 +354,8 @@
       <div id="listaUsuariosRegistrados" style="max-height:160px; overflow-y:auto;"></div>
     </div>
   </div>
-
+</body>
+</html>
 
 
 <script>
@@ -805,9 +813,11 @@
       return Math.round((ventaProyectada / metaMensual) * 100);
     }
 
-    async function consultarMetas() {
+async function consultarMetas() {
   const mesSelect = Number(document.getElementById('selectMesMetas').value);
   const anioSelect = Number(document.getElementById('selectAnioMetas').value);
+  const selectVendedor = document.getElementById('selectVendedorMetas');
+  const vendedorSeleccionado = selectVendedor ? selectVendedor.value : 'TODOS';
 
   try {
     const res = await fetch(`/api/ventas/metas?anio=${anioSelect}&mes=${mesSelect}`);
@@ -816,7 +826,17 @@
     // 1. Obtener la lista base excluyendo roles descartados
     const todosVendedores = (data.vendedores || []).filter(v => !esExcluido(v.vendedor));
 
-    // 2. FILTRAR PRIMERO SEGÚN EL ROL DEL USUARIO
+    // 2. POBLAR EL DESPLEGABLE DE VENDEDORES (si aún no está cargado)
+    if (selectVendedor && selectVendedor.options.length <= 1) {
+      todosVendedores.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v.vendedor;
+        opt.textContent = v.vendedor;
+        selectVendedor.appendChild(opt);
+      });
+    }
+
+    // 3. FILTRAR POR ROL DE USUARIO O POR EL SELECT
     const esVendedor = esRolVendedor(usuarioActual);
     const vendVinculado = obtenerNombreVendedor(usuarioActual);
 
@@ -824,32 +844,45 @@
       if (esVendedor && vendVinculado) {
         return v.vendedor.toLowerCase().includes(vendVinculado.toLowerCase());
       }
+      if (vendedorSeleccionado !== 'TODOS') {
+        return v.vendedor.toLowerCase() === vendedorSeleccionado.toLowerCase();
+      }
       return true;
     });
 
-    // 3. CALCULAMOS EL TOTAL DE CADA SEMANA SOLO SOBRE LOS VENDEDORES VISIBLES
+    // 4. CALCULAMOS EL TOTAL VENDIDO Y LA META TOTAL DE CADA SEMANA
     const tramos = data.tramos || [];
-    const totalesSemanales = tramos.map((_, idx) => {
-      return vendedoresMetasCache.reduce((acc, v) => {
-        const ventaSemana = (v.semanas && v.semanas[idx]) ? (v.semanas[idx].vendido || 0) : 0;
-        return acc + ventaSemana;
-      }, 0);
+    const resumenSemanas = tramos.map((_, idx) => {
+      let sumaVendido = 0;
+      let sumaMeta = 0;
+
+      vendedoresMetasCache.forEach(v => {
+        if (v.semanas && v.semanas[idx]) {
+          sumaVendido += (v.semanas[idx].vendido || 0);
+          sumaMeta += (v.semanas[idx].metaTramo || 0);
+        }
+      });
+
+      const pctSemana = sumaMeta > 0 ? Math.round((sumaVendido / sumaMeta) * 100) : 0;
+      return { vendido: sumaVendido, meta: sumaMeta, pct: pctSemana };
     });
 
-    // 4. CONSTRUIMOS EL ENCABEZADO CON EL TOTAL CORRESPONDIENTE AL ROL
+    // 5. CONSTRUIMOS EL ENCABEZADO MOSTRANDO MONTO Y % CUMPLIDO
     let trHeader = '<th>Vendedor</th><th class="num">Meta Mensual</th>';
     tramos.forEach((t, idx) => {
-      const totalSemana = totalesSemanales[idx] || 0;
+      const sem = resumenSemanas[idx];
+      let badgeClass = sem.pct >= 100 ? 'badge-success' : (sem.pct >= 50 ? 'badge-warning' : 'badge-danger');
+
       trHeader += `<th class="center">
         ${escapeHTML(t.label)}
         <span class="subtext">${t.diasHabiles} días hábiles</span>
         <div style="margin-top: 3px; font-weight: bold; color: #1e3a8a; font-size: 0.85rem;">
-          ${fmt(totalSemana)}
+          ${fmt(sem.vendido)}
         </div>
+        <span class="badge-pct ${badgeClass}" style="margin-top:2px;">${sem.pct}%</span>
       </th>`;
     });
     
-    // Se agrega la columna 'Prom. Diario' después de 'Venta Total'
     trHeader += '<th class="num">Venta Total</th><th class="num">Prom. Diario</th><th class="center">% Avance Mes</th><th class="center">% Proyección</th>';
     document.getElementById('trHeaderMetas').innerHTML = trHeader;
 
@@ -892,7 +925,6 @@
       const pctProyectado = calcularPctProyectado(v.vendidoMes, v.metaMensual, diasTranscurridos, diasTotales);
       let pctProyClass = pctProyectado >= 100 ? 'badge-success' : (pctProyectado >= 80 ? 'badge-warning' : 'badge-danger');
 
-      // Cálculo del promedio diario basado en los días hábiles transcurridos
       const promDiario = diasTranscurridos > 0 ? Math.round((v.vendidoMes || 0) / diasTranscurridos) : 0;
 
       bodyHtml += `
@@ -906,7 +938,6 @@
 
   } catch (e) { console.error(e); }
 }
-
 
     function abrirModalMeta() {
       const cont = document.getElementById('listaEdicionMetas');
