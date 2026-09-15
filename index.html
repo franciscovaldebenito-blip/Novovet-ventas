@@ -414,7 +414,7 @@
       if (elA) elA.innerHTML = [ANIO_ACTUAL - 1, ANIO_ACTUAL, ANIO_ACTUAL + 1].map(a => `<option value="${a}" ${a === ANIO_ACTUAL ? 'selected' : ''}>${a}</option>`).join('');
     }
 
-    async function iniciarSesion() {
+async function iniciarSesion() {
       const email = document.getElementById('loginEmail').value.trim();
       if (!email) return alert('Ingrese correo');
 
@@ -444,6 +444,25 @@
           document.getElementById('containerFiltroVendedorProv').style.display = 'none';
           document.getElementById('btnRestablecerGrafico').style.display = 'none';
           document.getElementById('lblRanking').innerText = 'MI RENDIMIENTO';
+
+          // 🔹 OPCIÓN A: Ocultar filtro de Vendedor en Metas
+          const contMetas = document.getElementById('containerFiltroVendedorMetas');
+          if (contMetas) {
+            contMetas.style.display = 'none';
+          } else {
+            const selectMetas = document.getElementById('selectVendedorMetas');
+            if (selectMetas) {
+              selectMetas.style.display = 'none';
+              if (selectMetas.previousElementSibling) {
+                selectMetas.previousElementSibling.style.display = 'none';
+              }
+            }
+          }
+
+          // 🔹 NUEVO: Ocultar botón "Cerrar Mes" si es VENDEDOR
+          const btnCerrar = document.getElementById('btnCerrarMes');
+          if (btnCerrar) btnCerrar.style.display = 'none';
+
         } else {
           document.getElementById('btnAccesos').style.display = 'inline-block';
           document.getElementById('btnSincronizar').style.display = 'inline-block';
@@ -452,6 +471,24 @@
           document.getElementById('containerFiltroVendedorProv').style.display = 'flex';
           document.getElementById('btnRestablecerGrafico').style.display = 'inline-block';
           document.getElementById('lblRanking').innerText = 'RANKING VENDEDORES';
+
+          // Mostrar filtro de Vendedor en Metas para Administradores
+          const contMetas = document.getElementById('containerFiltroVendedorMetas');
+          if (contMetas) {
+            contMetas.style.display = 'inline-block';
+          } else {
+            const selectMetas = document.getElementById('selectVendedorMetas');
+            if (selectMetas) {
+              selectMetas.style.display = 'inline-block';
+              if (selectMetas.previousElementSibling) {
+                selectMetas.previousElementSibling.style.display = 'inline-block';
+              }
+            }
+          }
+
+          // 🔹 NUEVO: Mostrar botón "Cerrar Mes" para ADMINISTRADOR
+          const btnCerrar = document.getElementById('btnCerrarMes');
+          if (btnCerrar) btnCerrar.style.display = 'inline-block';
         }
 
         await poblarTodosLosSelectsVendedores();
@@ -626,6 +663,12 @@
 }
 
     async function cerrarMesActual() {
+      // 🔒 Validación de seguridad por Rol (Bloqueo para Vendedores)
+      if (esRolVendedor(usuarioActual)) {
+        alert('Acceso denegado: Solo los administradores pueden realizar el cierre de mes.');
+        return;
+      }
+
       const selectMes = document.getElementById('selectMesMetas');
       const selectAnio = document.getElementById('selectAnioMetas');
 
@@ -675,6 +718,7 @@
         }
       }
     }
+
 
     async function sincronizarBDManual() {
       const btn = document.getElementById('btnSincronizar');
