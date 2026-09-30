@@ -840,33 +840,62 @@ app.get('/api/ventas/metas', async (req, res) => {
   }
 });
 
-app.post('/api/ventas/metas/guardar', async (req, res) => {
+app.post(['/api/ventas/metas/guardar', '/api/ventas/metas/guardar-masivo'], async (req, res) => {
   try {
     const { anio, mes, metas } = req.body;
     const anioNum = Number(anio);
     const mesNum = Number(mes);
 
+    if (!metas || !Array.isArray(metas)) {
+      return res.status(400).json({ ok: false, error: 'Lista de metas no válida.' });
+    }
+
+    // 1. Obtener la lista de usuarios para cruzar los correos electrónicos
+    const { data: usuariosBD } = await supabase
+      .from('usuarios')
+      .select('nombre, email, vendedor_vinculado');
+
     for (const m of metas) {
-      const metaNum = Number(m.meta);
+      const metaNum = Number(m.meta) || 0;
+      const nombreLimpio = String(m.nombre).trim();
 
-      // 1. Guardar/Actualizar en la tabla principal de metas
-      await supabase.from('metas_vendedores').upsert({
-        anio: anioNum,
-        mes: mesNum,
-        nombre: m.nombre,
-        meta: metaNum
-      }, { onConflict: 'anio,mes,nombre' });
+      // Buscar el correo que coincide con el vendedor
+      let correoVendedor = null;
+      if (usuariosBD && usuariosBD.length > 0) {
+        const usuarioEncontrado = usuariosBD.find(u => 
+          (u.nombre && u.nombre.toLowerCase().trim() === nombreLimpio.toLowerCase()) ||
+          (u.vendedor_vinculado && u.vendedor_vinculado.toLowerCase().trim() === nombreLimpio.toLowerCase())
+        );
+        if (usuarioEncontrado) {
+          correoVendedor = usuarioEncontrado.email;
+        }
+      }
 
-      // 2. Buscar si existe un cierre previo registrado para este vendedor/año/mes
+      // 2. Guardar/Actualizar incluyendo el correo
+      const { error: errUpsert } = await supabase
+        .from('metas_vendedores')
+        .upsert({
+          anio: anioNum,
+          mes: mesNum,
+          nombre: nombreLimpio,
+          meta: metaNum,
+          correo: correoVendedor
+        }, { onConflict: 'anio,mes,nombre' });
+
+      if (errUpsert) {
+        console.error(`Error guardando meta de ${nombreLimpio}:`, errUpsert.message);
+        throw errUpsert;
+      }
+
+      // 3. Si el mes ya estaba cerrado en historico_cierres, actualizarlo
       const { data: cierreExistente } = await supabase
         .from('historico_cierres')
         .select('monto')
         .eq('anio', anioNum)
         .eq('mes', mesNum)
-        .eq('vendedor', m.nombre)
+        .eq('vendedor', nombreLimpio)
         .maybeSingle();
 
-      // 3. Si el mes ya estaba cerrado, recalcular y actualizar el histórico
       if (cierreExistente) {
         const monto = cierreExistente.monto || 0;
         const nuevoPct = metaNum > 0 ? Math.round((monto / metaNum) * 100) : 0;
@@ -879,16 +908,16 @@ app.post('/api/ventas/metas/guardar', async (req, res) => {
           })
           .eq('anio', anioNum)
           .eq('mes', mesNum)
-          .eq('vendedor', m.nombre);
+          .eq('vendedor', nombreLimpio);
       }
     }
 
-    res.json({ ok: true });
+    return res.json({ ok: true, mensaje: 'Metas guardadas con éxito' });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Error general en guardar metas:', err.message);
+    return res.status(500).json({ ok: false, error: err.message });
   }
 });
-
 // NUEVO ENDPOINT PARA REALIZAR EL CIERRE DE MES
 app.post('/api/ventas/metas/cerrar-mes', async (req, res) => {
   try {
@@ -972,6 +1001,8 @@ app.post('/api/usuarios/guardar', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Servidor listo y ejecutándose en http://localhost:${PORT}`));

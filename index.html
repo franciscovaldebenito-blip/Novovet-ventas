@@ -317,19 +317,20 @@
     </main>
   </div>
 
-  <!-- MODAL ASIGNAR METAS -->
-  <div class="modal-overlay" id="modalMetas">
-    <div class="modal-box">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <h3 style="font-size:16px;">Asignar Metas Mensuales</h3>
-        <span style="cursor:pointer; font-weight:bold; color:#64748b;" onclick="cerrarModalMeta()">✕</span>
-      </div>
-      <form onsubmit="event.preventDefault(); guardarMetas();">
-        <div id="listaEdicionMetas" style="max-height:280px; overflow-y:auto; margin-bottom:15px; padding-right:4px;"></div>
-        <button class="btn-login" type="submit">Guardar Metas</button>
-      </form>
+<!-- MODAL ASIGNAR METAS SIN ETIQUETA FORM -->
+<div class="modal-overlay" id="modalMetas">
+  <div class="modal-box">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <h3 style="font-size:16px;">Asignar Metas Mensuales</h3>
+      <span style="cursor:pointer; font-weight:bold; color:#64748b;" onclick="cerrarModalMeta()">✕</span>
     </div>
+    
+    <div id="listaEdicionMetas" style="max-height:280px; overflow-y:auto; margin-bottom:15px; padding-right:4px;"></div>
+    
+    <!-- type="button" explicito y onclick directo -->
+    <button class="btn-login" type="button" onclick="guardarMetas()">Guardar Metas</button>
   </div>
+</div>
 
   <!-- MODAL ACCESOS -->
   <div class="modal-overlay" id="modalAccesos">
@@ -1008,34 +1009,123 @@
       document.getElementById('modalMetas').style.display = 'none'; 
     }
 
-    async function guardarMetas() {
-      const mes = document.getElementById('selectMesMetas').value;
-      const anio = document.getElementById('selectAnioMetas').value;
-      const cont = document.getElementById('listaEdicionMetas');
-      const inputs = cont.querySelectorAll('input[data-vendedor]');
+async function guardarMetas(event) {
+  // 1. Prevenir que el formulario HTML recargue la página y destruya la sesión
+  if (event && typeof event.preventDefault === 'function') {
+    event.preventDefault();
+  }
 
-      const payload = [];
-      inputs.forEach(inp => {
-        payload.push({
-          vendedor: inp.getAttribute('data-vendedor'),
-          meta: Number(inp.value) || 0
-        });
+  try {
+    // 2. Obtener Año y Mes directamente de los selects superiores de la interfaz
+    const selects = document.querySelectorAll('select');
+    let anio = null;
+    let mes = null;
+
+    // Intentar buscar por ID directo primero
+    const elAnio = document.getElementById('filtroAnio') || document.getElementById('selectAnio');
+    const elMes = document.getElementById('filtroMes') || document.getElementById('selectMes');
+
+    if (elAnio) anio = elAnio.value;
+    if (elMes) mes = elMes.value;
+
+    // Respaldo por iteración en los selects activos si los IDs no coinciden
+    if (!anio || !mes) {
+      selects.forEach(s => {
+        const valStr = String(s.value).toLowerCase();
+        if (s.id.includes('anio') || s.id.includes('year') || Number(s.value) > 2020) {
+          anio = s.value;
+        }
+        if (s.id.includes('mes') || s.id.includes('month') || valStr.includes('octubre') || (Number(s.value) >= 1 && Number(s.value) <= 12)) {
+          mes = s.value;
+        }
       });
-
-      try {
-        await fetch('/api/ventas/metas/guardar-masivo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ anio, mes, metas: payload })
-        });
-
-        cerrarModalMeta();
-        consultarMetas();
-      } catch (e) {
-        console.error('Error guardando metas:', e);
-        alert('Error al guardar las metas');
-      }
     }
+
+    // Convertir nombre del mes (ej: "Octubre") a número (10)
+    const mesesMap = {
+      'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 'mayo': 5, 'junio': 6,
+      'julio': 7, 'agosto': 8, 'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+    };
+
+    if (isNaN(mes) && mes) {
+      mes = mesesMap[mes.toString().toLowerCase()] || mes;
+    }
+
+    // Validar que tengamos año y mes válidos
+    const anioNum = Number(anio);
+    const mesNum = Number(mes);
+
+    if (!anioNum || !mesNum) {
+      alert('Por favor selecciona un año y mes válidos en el filtro superior.');
+      return;
+    }
+
+    // 3. Recolectar las metas de cada vendedor dentro del modal
+    const contenedorModal = document.getElementById('listaEdicionMetas') || document.getElementById('modalMetas');
+    const inputs = contenedorModal ? contenedorModal.querySelectorAll('input') : [];
+    const metas = [];
+
+    inputs.forEach(input => {
+      // Extraer el nombre del vendedor asignado al input
+      const nombre = input.dataset.vendedor || input.name || input.id;
+      const valorMeta = parseFloat(input.value) || 0;
+
+      if (nombre && nombre !== 'undefined') {
+        metas.push({
+          nombre: nombre.trim(),
+          meta: valorMeta
+        });
+      }
+    });
+
+    if (metas.length === 0) {
+      alert('No se encontraron vendedores en el modal para guardar.');
+      return;
+    }
+
+    // 4. Enviar datos al endpoint del servidor
+    const res = await fetch('/api/ventas/metas/guardar-masivo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        anio: anioNum,
+        mes: mesNum,
+        metas: metas
+      })
+    });
+
+    const data = await res.json();
+
+    if (data.ok) {
+      alert(`¡Metas del mes ${mesNum}/${anioNum} guardadas correctamente!`);
+
+      // 5. Cerrar el modal sin recargar la página
+      if (typeof cerrarModalMeta === 'function') {
+        cerrarModalMeta();
+      } else if (typeof cerrarModalMetas === 'function') {
+        cerrarModalMetas();
+      } else {
+        const modalEl = document.getElementById('modalMetas');
+        if (modalEl) modalEl.style.display = 'none';
+      }
+
+      // 6. Refrescar la vista/tabla en pantalla
+      if (typeof cargarDatosMetas === 'function') {
+        cargarDatosMetas();
+      } else if (typeof cargarMetas === 'function') {
+        cargarMetas();
+      } else if (typeof renderizarTabla === 'function') {
+        renderizarTabla();
+      }
+    } else {
+      alert('Error al guardar: ' + data.error);
+    }
+
+  } catch (err) {
+    console.error('Error procesando el guardado de metas:', err);
+    alert('Ocurrió un error al intentar guardar las metas.');
+  }
+}
 
     async function consultarDetalle() {
       let vend = document.getElementById('filtroVendedor')?.value || '';
