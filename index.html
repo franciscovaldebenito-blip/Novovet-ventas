@@ -381,6 +381,13 @@
       return EXCLUIDOS.some(e => n.includes(e));
     }
 
+function cerrarModalMeta() {
+  const modal = document.getElementById('modalMetas');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
     function escapeHTML(str) {
       if (!str) return '';
       return String(str).replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m]);
@@ -966,48 +973,71 @@
       } catch (e) { console.error(e); }
     }
 
-    async function abrirModalMeta() {
-      const cont = document.getElementById('listaEdicionMetas');
-      if (!cont) return;
+async function abrirModalMeta() {
+  const contenedor = document.getElementById('listaEdicionMetas');
+  const modal = document.getElementById('modalMetas');
+  
+  if (!contenedor || !modal) return;
+  
+  contenedor.innerHTML = '<p style="text-align:center; color:#64748b; padding:15px;">Cargando metas del mes...</p>';
+  modal.style.display = 'flex';
 
-      let listaVendedores = [];
-      try {
-        const res = await fetch('/api/vendedores/lista-completa');
-        const vendedoresRaw = await res.json();
-        listaVendedores = (vendedoresRaw || []).filter(v => !esExcluido(v));
-      } catch (e) {
-        console.error("Error obteniendo vendedores para modal:", e);
-      }
+  const selectAnio = document.getElementById('filtroAnio') || document.querySelector('select[id*="anio"]');
+  const selectMes = document.getElementById('filtroMes') || document.querySelector('select[id*="mes"]');
 
-      if (!listaVendedores.length && vendedoresMetasCache.length) {
-        listaVendedores = vendedoresMetasCache.map(v => v.vendedor);
-      }
+  const anio = selectAnio ? selectAnio.value : 2026;
+  let mesVal = selectMes ? selectMes.value : 9;
 
-      const mapaMetasExistentes = {};
-      vendedoresMetasCache.forEach(v => {
-        mapaMetasExistentes[v.vendedor] = v.metaMensual || 0;
-      });
+  const mesesMap = {
+    'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 'mayo': 5, 'junio': 6,
+    'julio': 7, 'agosto': 8, 'septiembre': 9, 'octubre': 10, 'noviembre': 11, 'diciembre': 12
+  };
 
-      let html = '';
-      listaVendedores.forEach((vend, idx) => {
-        const nombre = typeof vend === 'string' ? vend : (vend.vendedor || vend.nombre);
-        const metaActual = mapaMetasExistentes[nombre] || 0;
+  let mesNum = parseInt(mesVal, 10);
+  if (isNaN(mesNum) && mesVal) {
+    mesNum = mesesMap[String(mesVal).toLowerCase().trim()] || 9;
+  }
 
-        html += `
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <span style="font-size:12px; font-weight:600;">${escapeHTML(nombre)}</span>
-            <input type="number" id="inputMeta_${idx}" data-vendedor="${escapeHTML(nombre)}" value="${metaActual}" style="width:140px; padding:4px 8px; text-align:right;">
-          </div>
-        `;
-      });
+  try {
+    const res = await fetch(`/api/ventas/metas?anio=${anio}&mes=${mesNum}`);
+    if (!res.ok) throw new Error('Error en la respuesta del servidor');
 
-      cont.innerHTML = html || '<div style="text-align:center; padding:10px;">No se encontraron vendedores</div>';
-      document.getElementById('modalMetas').style.display = 'flex';
+    const data = await res.json();
+    const listaVendedores = data.vendedores || [];
+
+    if (listaVendedores.length === 0) {
+      contenedor.innerHTML = '<p style="text-align:center; color:#ef4444;">No se encontraron vendedores para este mes.</p>';
+      return;
     }
 
-    function cerrarModalMeta() { 
-      document.getElementById('modalMetas').style.display = 'none'; 
-    }
+    let html = '';
+    
+    listaVendedores.forEach(item => {
+      const nombreVendedor = item.vendedor || 'Sin Nombre';
+      const valorMeta = Number(item.metaMensual) || 0;
+
+      html += `
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #f1f5f9;">
+          <label style="font-size:13px; color:#334155; font-weight:500;">${nombreVendedor}</label>
+          <input 
+            type="number" 
+            class="input-meta" 
+            data-vendedor="${nombreVendedor}" 
+            value="${valorMeta}" 
+            style="width:140px; padding:6px; border:1px solid #cbd5e1; border-radius:4px; text-align:right;"
+          />
+        </div>
+      `;
+    });
+
+    contenedor.innerHTML = html;
+
+  } catch (err) {
+    console.error('Error al abrir modal de metas:', err);
+    contenedor.innerHTML = '<p style="text-align:center; color:#ef4444;">Ocurrió un error al cargar las metas.</p>';
+  }
+}
+
 
 async function guardarMetas(event) {
   // 1. Prevenir que el formulario HTML recargue la página y destruya la sesión
